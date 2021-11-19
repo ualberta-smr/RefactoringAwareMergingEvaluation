@@ -16,7 +16,7 @@ unsupported_types = ['CHANGE_PACKAGE', 'MOVE_ATTRIBUTE', 'RENAME_ATTRIBUTE', 'PU
 
 def get_db_connection():
     username = 'root'
-    password = "password"
+    password = "mysql1234"
     database_name = 'refMerge_evaluation'
     server = '127.0.0.1'
 
@@ -177,7 +177,66 @@ def get_accepted_refactoring_regions():
 
 def get_merge_conflict_and_conflicting_loc_diffs_per_tool():
     return
+
+def get_detailed_stats_per_proj():
+    merge_results = get_merge_results()
+
+    df = pd.DataFrame(columns=['project_name', 'total_scenarios', 'total_resolvedIntelliMerge', 'reduced_conflict_intellimerge', 'increased_conflict_intellimerge', 'same_conflict_intellimerge', 'total_resolvedRefMerge', 'reduced_conflict_refmerge', 'increased_conflict_refmerge', 'same_conflict_refmerge'])
     
+    counter = 0
+
+    for project_id in merge_results['project_id'].unique():
+        project_name = get_project_by_id(project_id)
+        project_data = merge_results[merge_results.project_id == project_id]
+        unique_merge_scenarios = project_data['merge_commit_id'].unique()
+
+        total_scenarios = len(unique_merge_scenarios)
+        total_resolved_intellimerge = len(project_data[(project_data.merge_tool=="IntelliMerge") & (project_data.total_conflicts == 0)])
+        total_resolved_refmerge = len(project_data[(project_data.merge_tool=="RefMerge") & (project_data.total_conflicts == 0)])
+        
+        reduced_intellimerge_git = 0
+        increased_intellimerge_git = 0
+        same_intellimerge_git = 0
+
+        reduced_refmerge_git = 0
+        increased_refmerge_git = 0
+        same_refmerge_git = 0
+
+        for merge_scenario in unique_merge_scenarios:
+            git_conflicts = project_data.loc[(project_data.merge_tool=="Git") & (project_data.merge_commit_id == merge_scenario), 'total_conflicts'].values[0]
+            intellimerge_conflicts = project_data.loc[(project_data.merge_tool=="IntelliMerge") & (project_data.merge_commit_id == merge_scenario), 'total_conflicts'].values[0]
+            refmerge_conflicts = project_data.loc[(project_data.merge_tool=="RefMerge") & (project_data.merge_commit_id == merge_scenario), 'total_conflicts'].values[0]
+
+            if intellimerge_conflicts > 0: #completely resolved are already accounted for
+                if git_conflicts == intellimerge_conflicts:
+                    same_intellimerge_git += 1
+                elif intellimerge_conflicts < git_conflicts:
+                    reduced_intellimerge_git +=1
+                else:
+                    increased_intellimerge_git += 1
+
+            if refmerge_conflicts > 0: #completely resolved are already accounted for
+                if git_conflicts == refmerge_conflicts:
+                    same_refmerge_git += 1
+                elif refmerge_conflicts < git_conflicts:
+                    reduced_refmerge_git +=1
+                else:
+                    increased_refmerge_git += 1 
+
+        df = df.append({'project_name':project_name, 'total_scenarios':total_scenarios, 'total_resolvedIntelliMerge':total_resolved_intellimerge, 'reduced_conflict_intellimerge':reduced_intellimerge_git, 'increased_conflict_intellimerge':increased_intellimerge_git, 'same_conflict_intellimerge':same_intellimerge_git, 'total_resolvedRefMerge':total_resolved_refmerge, 'reduced_conflict_refmerge':reduced_refmerge_git, 'increased_conflict_refmerge':increased_refmerge_git, 'same_conflict_refmerge':same_refmerge_git}, ignore_index=True)          
+
+    df.to_csv("../results/overall.csv")
+    # for project_id, project_mr in merge_results.groupby('project_id'):
+    #     if project_id == 10:
+    #         continue
+    #     project_name = get_project_by_id(project_id)
+
+    #     print(project_name, project_mr)
+        
+    #     # git_resolved = 
+    #     # df = df.append({'project_name': project_name, 'merge_tool': str(project_mr['merge_tool'], 'precision': auto_merged_precision, 'recall': auto_merged_recall, 'conflict_blocks': conflict_blocks, 'conflicting_loc': conflicting_loc}, ignore_index=True)
+
+
 def get_statistics_per_project():
 
     merge_results = get_merge_results()
@@ -956,6 +1015,8 @@ def get_conflicting_file_reduction():
 
     return plot_df
 
+def get_all_stats():
+    merge_results = get_merge_results()
 
 def get_conflicting_stats():
 
@@ -1030,10 +1091,14 @@ def get_stats_for_supported_refactorings():
         intelliMerge_total = 0
         git_total = 0
         count = 0
+
         for mc_cb in project_mc.iloc:
             count += 1
+            
             if mc_cb['is_done'] == 0:
                 continue
+
+            print("id", mc_cb['id'])
             cb_group = cb_mc.get_group(mc_cb['id']) 
 
             if mc_has_supported_types(mc_cb['id']) == False:
@@ -1079,4 +1144,4 @@ def print_stats():
 
 
 if __name__ == '__main__':
-    get_stats_for_supported_refactorings()
+    get_detailed_stats_per_proj()
