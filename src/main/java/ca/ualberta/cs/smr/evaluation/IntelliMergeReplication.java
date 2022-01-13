@@ -5,7 +5,7 @@ import ca.ualberta.cs.smr.evaluation.data.ConflictBlockData;
 import ca.ualberta.cs.smr.evaluation.data.ConflictingFileData;
 import ca.ualberta.cs.smr.evaluation.data.SourceFile;
 import ca.ualberta.cs.smr.evaluation.database.*;
-import ca.ualberta.cs.smr.utils.EvaluationUtils;
+import ca.ualberta.cs.smr.evaluation.utils.EvaluationUtils;
 import com.google.googlejavaformat.java.Formatter;
 import com.google.googlejavaformat.java.FormatterException;
 import edu.pku.intellimerge.client.APIClient;
