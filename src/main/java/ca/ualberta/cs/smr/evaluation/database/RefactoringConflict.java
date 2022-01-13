@@ -1,6 +1,6 @@
 package ca.ualberta.cs.smr.evaluation.database;
 
-import ca.ualberta.cs.smr.core.refactoringObjects.RefactoringObject;
+import ca.ualberta.cs.smr.refmerge.refactoringObjects.RefactoringObject;
 import org.javalite.activejdbc.Model;
 import org.javalite.activejdbc.annotations.Table;
 
