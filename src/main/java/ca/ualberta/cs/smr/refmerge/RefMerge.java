@@ -3,7 +3,7 @@ package ca.ualberta.cs.smr.refmerge;
 import ca.ualberta.cs.smr.refmerge.matrix.Matrix;
 import ca.ualberta.cs.smr.refmerge.replayOperations.*;
 import ca.ualberta.cs.smr.refmerge.invertOperations.*;
-import ca.ualberta.cs.smr.utils.RefactoringObjectUtils;
+import ca.ualberta.cs.smr.refmerge.utils.RefactoringObjectUtils;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.RefactoringObject;
 import ca.ualberta.cs.smr.utils.Utils;
 import com.intellij.openapi.actionSystem.AnAction;
