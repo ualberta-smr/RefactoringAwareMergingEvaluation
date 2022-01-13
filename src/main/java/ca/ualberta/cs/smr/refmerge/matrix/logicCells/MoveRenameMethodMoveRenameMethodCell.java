@@ -7,7 +7,7 @@ import ca.ualberta.cs.smr.utils.Utils;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiClass;
 
-import static ca.ualberta.cs.smr.utils.MatrixUtils.*;
+import static ca.ualberta.cs.smr.refmerge.utils.MatrixUtils.*;
 
 /*
  * Contains the logic checks for rename method/rename method conflicts.

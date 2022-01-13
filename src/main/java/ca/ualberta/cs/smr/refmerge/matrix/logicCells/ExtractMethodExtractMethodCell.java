@@ -10,7 +10,7 @@ import gr.uom.java.xmi.decomposition.AbstractCodeFragment;
 
 import java.util.Set;
 
-import static ca.ualberta.cs.smr.utils.MatrixUtils.*;
+import static ca.ualberta.cs.smr.refmerge.utils.MatrixUtils.*;
 
 /*
  * Contains the logic check for extract method/extract method refactoring conflict checks.
