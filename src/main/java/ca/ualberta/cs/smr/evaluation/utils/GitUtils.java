@@ -1,10 +1,9 @@
-package ca.ualberta.cs.smr.utils;
+package ca.ualberta.cs.smr.evaluation.utils;
 
 import ca.ualberta.cs.smr.refmerge.utils.Utils;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vcs.VcsException;
 import com.intellij.openapi.vfs.VirtualFile;
-import git4idea.GitCommit;
 import git4idea.GitRevisionNumber;
 import git4idea.commands.Git;
 import git4idea.commands.GitCommand;
@@ -25,14 +24,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class GitUtils {
 
-    public static final String CONFLICT_LEFT_BEGIN = "<<<<<<<";
-    public static final String CONFLICT_RIGHT_END = ">>>>>>>";
 
     private final Project project;
     private final GitRepository repo;
@@ -54,16 +49,9 @@ public class GitUtils {
             e.printStackTrace();
         }
         // Refresh the virtual file system after the commit
-        Utils.refreshVFS();
+        ca.ualberta.cs.smr.refmerge.utils.Utils.refreshVFS();
     }
 
-    /*
-     * Perform git add -A and git commit
-     */
-    public String addAndCommit() {
-        add();
-        return commit();
-    }
 
     public void add() {
         GitAdd thread = new GitAdd(project, repo);
@@ -75,22 +63,9 @@ public class GitUtils {
         }
     }
 
-    public String commit() {
-        DoGitCommit gitCommit = new DoGitCommit(repo, project);
-
-        Thread thread = new Thread(gitCommit);
-        thread.start();
-        try {
-            thread.join();
-            return gitCommit.getCommit();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     public void reset() {
-        Utils.runSystemCommand("git", "clean");
+        ca.ualberta.cs.smr.refmerge.utils.Utils.runSystemCommand("git", "clean");
         Git.getInstance().reset(repo, GitResetMode.HARD, "HEAD");
     }
 
@@ -179,61 +154,6 @@ public class GitUtils {
 
     }
 
-    /*
-     * Get the merge commits of a project for evaluation.
-     */
-    public List<GitCommit> getMergeCommits() {
-        VirtualFile root = repo.getRoot();
-        class MergeCommitsThread extends Thread {
-            List<GitCommit> commits;
-            @Override
-            public void run() {
-                try {
-
-                    this.commits = GitHistoryUtils.history(project, root);
-                } catch (VcsException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            public List<GitCommit> getCommits() {
-                return this.commits;
-            }
-        }
-        MergeCommitsThread thread = new MergeCommitsThread();
-        thread.start();
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        List<GitCommit> commits = thread.getCommits();
-        // get list of commits
-        List<GitCommit> mergeCommits = new ArrayList<>();
-        for(GitCommit commit : commits) {
-            // check if each commit is a merge commit
-            if(commit.getParents().size() == 2) {
-                // if yes, add to a list of merge commits
-                mergeCommits.add(commit);
-            }
-        }
-        return mergeCommits;
-    }
-
-    /*
-     * Get the target merge commit that we are evaluating the tools on.
-     */
-    public GitCommit getTargetMergeCommit(String targetCommit) {
-        GitCommit mergeCommit = null;
-        List<GitCommit> mergeCommits = this.getMergeCommits();
-        for(GitCommit gitCommit : mergeCommits) {
-            String commitHash = gitCommit.getId().toString();
-            if (commitHash.equals(targetCommit)) {
-                mergeCommit = gitCommit;
-            }
-        }
-        return mergeCommit;
-    }
 
     public static String diff(String dir, String path1, String path2) {
         StringBuilder builder = new StringBuilder();
@@ -260,12 +180,6 @@ public class GitUtils {
 
     }
 
-    /*
-     * Checkout the given commit for the IntelliMerge replication. Use this instead of GitUtils because there is no project.
-     */
-    public static void checkoutForReplication(org.eclipse.jgit.api.Git git, String commit) throws GitAPIException {
-        git.checkout().setName(commit).call();
-    }
 
     /*
      * Get the base commit for the IntelliMerge replications. Use this instead of GitUtils because there is no project.
@@ -321,58 +235,8 @@ public class GitUtils {
         return null;
     }
 
-    public List<String> getConflictingFilePaths() {
-        AtomicReference<GitCommandResult> gitCommandResult = new AtomicReference<>();
-        Thread thread = new Thread(() -> {
-            GitLineHandler lineHandler = new GitLineHandler(project, repo.getRoot(), GitCommand.DIFF);
-            lineHandler.addParameters("--name-only", "--diff-filter=U");
-            gitCommandResult.set(Git.getInstance().runCommand(lineHandler));
-        });
-        thread.start();
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return gitCommandResult.get().getOutput();
-
-    }
 
 
-
-}
-
-class DoGitCommit implements Runnable {
-    private final Project project;
-    private final GitRepository repo;
-    private String commit;
-
-    public DoGitCommit(GitRepository repo, Project project) {
-        this.project = project;
-        this.repo = repo;
-    }
-
-    @Override
-    public void run() {
-        GitLineHandler lineHandler = new GitLineHandler(project, repo.getRoot(), GitCommand.COMMIT);
-        // Add message to commit to clearly show it's RefMerge step
-        lineHandler.addParameters("-m", "RefMerge");
-        GitCommandResult result = Git.getInstance().runCommand(lineHandler);
-        String res = result.getOutput().get(0);
-        // get the commit hash from the output message
-        String commit;
-        if(res.contains("]")) {
-            commit = res.substring(res.indexOf("HEAD") + 1, res.indexOf("]") - 1);
-        }
-        else {
-            commit = res.substring(res.lastIndexOf(" ") + 1, res.length()-1);
-        }
-        this.commit = commit.substring(commit.lastIndexOf(" ") + 1);
-    }
-
-    public String getCommit() {
-        return commit;
-    }
 }
 
 class GitAdd extends Thread {

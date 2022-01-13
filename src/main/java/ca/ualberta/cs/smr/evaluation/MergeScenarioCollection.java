@@ -1,6 +1,6 @@
 package ca.ualberta.cs.smr.evaluation;
 
-import ca.ualberta.cs.smr.utils.GitUtils;
+import ca.ualberta.cs.smr.evaluation.utils.GitUtils;
 import ca.ualberta.cs.smr.evaluation.utils.Utils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jgit.api.Git;

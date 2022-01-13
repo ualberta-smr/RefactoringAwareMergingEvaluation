@@ -20,7 +20,7 @@ import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.eclipse.jgit.api.Git;
-import ca.ualberta.cs.smr.utils.GitUtils;
+import ca.ualberta.cs.smr.refmerge.utils.GitUtils;
 
 import java.io.File;
 import java.io.IOException;

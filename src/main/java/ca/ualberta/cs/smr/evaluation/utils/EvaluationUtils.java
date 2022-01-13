@@ -1,7 +1,6 @@
 package ca.ualberta.cs.smr.evaluation.utils;
 
 import ca.ualberta.cs.smr.evaluation.data.*;
-import ca.ualberta.cs.smr.utils.GitUtils;
 import com.commentremover.app.CommentProcessor;
 import com.commentremover.app.CommentRemover;
 import com.commentremover.exception.CommentRemoverException;
