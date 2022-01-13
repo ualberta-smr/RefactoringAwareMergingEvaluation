@@ -5,7 +5,7 @@ import ca.ualberta.cs.smr.refmerge.replayOperations.*;
 import ca.ualberta.cs.smr.refmerge.invertOperations.*;
 import ca.ualberta.cs.smr.refmerge.utils.RefactoringObjectUtils;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.RefactoringObject;
-import ca.ualberta.cs.smr.utils.Utils;
+import ca.ualberta.cs.smr.refmerge.utils.Utils;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 

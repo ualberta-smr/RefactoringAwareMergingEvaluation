@@ -3,7 +3,7 @@ package ca.ualberta.cs.smr.refmerge.matrix.logicCells;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.ExtractMethodObject;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.typeObjects.MethodSignatureObject;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.RefactoringObject;
-import ca.ualberta.cs.smr.utils.Utils;
+import ca.ualberta.cs.smr.refmerge.utils.Utils;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiClass;
 import gr.uom.java.xmi.decomposition.AbstractCodeFragment;
