@@ -1,12 +1,12 @@
 package ca.ualberta.cs.smr.evaluation;
 
-import ca.ualberta.cs.smr.core.RefMerge;
-import ca.ualberta.cs.smr.core.refactoringObjects.RefactoringObject;
+import ca.ualberta.cs.smr.refmerge.RefMerge;
+import ca.ualberta.cs.smr.refmerge.refactoringObjects.RefactoringObject;
 import ca.ualberta.cs.smr.evaluation.data.*;
 import ca.ualberta.cs.smr.evaluation.database.*;
-import ca.ualberta.cs.smr.utils.EvaluationUtils;
-import ca.ualberta.cs.smr.utils.GitUtils;
-import ca.ualberta.cs.smr.utils.Utils;
+import ca.ualberta.cs.smr.evaluation.utils.EvaluationUtils;
+import ca.ualberta.cs.smr.evaluation.utils.GitUtils;
+import ca.ualberta.cs.smr.evaluation.utils.Utils;
 import com.intellij.ide.impl.ProjectUtil;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.vfs.LocalFileSystem;

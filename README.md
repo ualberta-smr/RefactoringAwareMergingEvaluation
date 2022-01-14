@@ -1,106 +1,90 @@
-# RefMerge
+# RefactoringAwareMerging
 
-This project is a refactoring-aware merging IntelliJ plugin. 
+This project evaluates operation-based refactoring-aware merging and graph-based 
+refactoring-aware merging.
 
 ## System requirements
 * Linux
 * git
-* Java 8
+* Java 11
 * IntelliJ (Community Addition) Version 2020.1.2
 
 ## How to run
 
-### 1. Create a temp directory in user.home
-Go to your user.home (/home/username) and add a temporary director "temp". 
-The base commit and changes to the right commit will be saved here.
-
-For example, my temp is located at /home/max/temp.
-
-### 2. Clone and build RefactoringMiner 
+### 1. Clone and build RefactoringMiner 
 Use `Git Clone https://github.com/tsantalis/RefactoringMiner.git` to clone RefactoringMiner. 
 Then build RefactoringMiner with `./gradlew distzip`. It will be under build/distributions.
 
-### 3. Add RefactoringMiner to your local maven repository
+### 2. Add RefactoringMiner to your local maven repository
 You will need to add RefactoringMiner to your local maven repository to
 use it in the build.gradle. You can use `mvn install:install-file -Dfile=<path-to-file>`
 to add it to your local maven repository. You can verify that it's been installed 
 by checking the path `/home/username/.m2/repository/org/refactoringminer`.
 
-### 4. Build the project
-Click on build tab in the IntelliJ IDE and select `Build Project`.
+### 3. Populate databases
+Use the refactoring analysis dump found [here](https://github.com/ualberta-smr/refactoring-analysis-results)
+to populate the original_analysis database. Use the database/intelliMerge_data1
+sql dump to populate intelliMerge_data1 database. Use the database/refactoringAwareMerging_dataset
+to populate refactoringAwareMerging_dataset database.
 
-### 5. Run the plugin
-Click `Run 'Plugin'` or `Debug 'Plugin'`. When it's running, click the `Tools` tab and select
-`RunRefMerge`. This will run the plugin. The plugin will do everything else.
-The matrix will print true/false for each handled operation, then the plugin will checkout 
-the base commit and copy it to `home/username/temp/base`. After this, it checks
-out the right commit and undoes handled refactorings. The content gets copied to 
-`home/username/temp/right`. The same happens for the left commit, however the project
-directory gets used for this one. When it merges, the merged content is saved in the project directory.
-Lastly, the refactorings are replayed in the project directory. When it finishes, you can
-look in the project directory to see the results.
+## IntelliMerge Replication
 
-## Adding new refactoring types
+### Get IntelliMerge replication commits
+Run `python intelliMerge_data_resolver` to get the IntelliMerge commits used in
+the IntelliMerge replication. 
 
-Adding a new refactoring type can be broken down into the following steps. 
+### Edit configuration
+Edit the configuration tasks to have `:runIde` and include set `-Pmode=` to `replication`. 
 
-### 1. Create refactoring object
+## RefactoringAwareMerging Comparison
 
-* Create a new `RefactoringObject` in the refactoringObjects folder. For example, when 
-adding extract method, we create `ExtractMethodObject`. 
+### Using IntelliMerge and RefMerge
 
-* Add it to `RefactoringObjectUtils` to create it from the RefMiner object.
+This project comes with the versions of IntelliMerge and RefMerge used in the paper. 
+The source code for the used version of IntelliMerge can be found here: https://github.com/max-ellis/IntelliMerge.git.
+ If you would like to use a different version of IntelliMerge, build the respective IntelliMerge version 
+and copy and paste that version into the lib folder.
 
-### 2. Determine order and transitivity logic
+RefMerge's history can be found here: https://github.com/ualberta-smr/RefMerge.git. The
+version used within this evaluation is release 1.0.0 in commit `adb13ff`.
+If you would like to use a different version of
+RefMerge, you first need to clone RefMerge. After you clone RefMerge, copy the code in
+`ca.ualberta.cs.smr.refmerge` and replace the code in the same package within this project.
 
-* Figure out which order the new refactoring type should be undone/replayed in. For example, 
-when we add extract method, extract method should be undone after rename class and 
-rename method.
-
-* Add it to the `RefactoringOrder` enum.
-
-* Add the associated logic cells. The logic cells will be the combination of the new refactoring
-type and the currently covered types. When adding extract method, that gives us the extract method/
-rename method, extract method/rename class, and extract method/extract method.
-
-* Determine if there is transitivity or if the refactorings can be combined and add the logic. 
-Extract method and rename method can have transitivity or be combined while extract method
-and rename class can only be combined. 
-
-* Add the logic to the cells and update the refactoring objects as transitivity/combinations are
-found.
-
-### 3. Determine conflict and dependence logic
-
-* Figure out how the new refactoring type can conflict or have dependence with a refactoring on
-a different branch. For example, extract method and rename method can conflict if the extracted 
-method on the left branch has the same name as the renamed method on the right branch in the same
-class. They can also conflict if the extracted method and renamed method have the same signature
-in classes with an inheritance relationship.
-
-* Add each logic check to the associated logic cell.
-
-### 4. Update logic matrix 
-
-* Add the new refactoring type to the dispatcher and receiver hashmaps. 
-
-* Add the new refactoring type to the vector in `Matrix.getRefactoringValue()`. Make sure to add
-it as the last entry to the vector.
-
-### 5. Programmatically revert the refactoring
-
-* Figure out which refactoring processor to use to undo the refactoring. For extract method, it's
-`InlineMethodProcessor` and rename method is `RefactoringFactory` and `RenameRefactoring`.
-
-* Use the information in your refactoring object to get the PSI elements necessary to perform
-the refactoring.
-
-### 6. Programmatically replay the refactoring
-
-* In most cases the refactoring process to replay the refactoring will be the same. For extract
-method, undoing the refactoring uses `InlineMethodProcessor` and replaying uses `ExtractMethodProcessor`.
-
-* Use the information in your refactoring object to get the PSI elements necessary to perform
-the refactoring.
+### Edit configuration
+Edit the configuration tasks to have `:runIde` and include set `-Pmode=` to `comparison`.
+Then, set `-PevaluationProject=` to the project that you want to evaluate on. For example,
+it would look like `-PevaluationProject=error-prone` if you want to evaluate on error-prone.
 
 
+### Running RQ1 experiment
+
+To replicate RQ1, first run `python project_sampler` to get the additional 10 projects used 
+in the evaluation. Then, run `python refMerge_data_resolver` to get the commits with
+refactoring-related conflicts.
+
+Put the `refMerge_evaluation_commits` file in the resources folder and the first file to
+the configuration, for example `-PevaluationProject=error-prone`. Clone that project
+and open it with the IntelliJ IDEA. Wait for IntelliJ to build the project, close it, and
+run the evaluation. Repeat this for each project. 
+
+Finally, use the scripts in evaluation_data_plotter to get tables and plots from the data.
+
+In the event that the evaluation pipeline crashes, rerunning it will continue from the 
+place it crashed at. 
+
+### Running RQ2 experiment
+
+First, use stats/evaluation_data_resolver to get the list of merge commit ids to sample. 
+Then use the query `SELECT * FROM merge_commit WHERE id = x;` to get the parent commits.
+Use `git merge-base p1 p2` to get the base commit and use `SELECT distinct path 
+FROM conflict WHERE merge_commit_id = x;` to get a list of the file paths. From there, 
+investigate the code region in the base commit, left parent, and right parent to determine
+if the conflicting region should be a conflict. Investigate the same region for all three
+tools to determine the discrepancies. 
+
+### Results
+
+The zip file, database/refactoringAwareMerging_results.zip, contains the results from
+ running the evaluation pipeline for RQ1.
+results/manual_sampling_results has the results for RQ2. 
