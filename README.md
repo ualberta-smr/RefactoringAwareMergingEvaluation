@@ -1,7 +1,8 @@
-# RefactoringAwareMerging
+# RefactoringAwareMergingEvaluation
 
-This project evaluates operation-based refactoring-aware merging and graph-based 
-refactoring-aware merging.
+In RefactoringAwareMergingEvaluation, we perform a quantitative comparison between operation-based refactoring-aware merging (implemented in RefMerge) and 
+graph-based refactoring-aware merging (implemented in IntelliMerge). Afterwards, we dive deeper into the results by manually sampling 50 merge scenarios and 
+investigate the conflicts that Git, RefMerge, and IntelliMerge report as well as what their causes are. This evaluation was used in the paper, "A Systematic Comparison of Two Refactoring-aware Merging Techniques" (http://arxiv.org/abs/2112.10370).
 
 ## System requirements
 * Linux
@@ -25,9 +26,15 @@ by checking the path `/home/username/.m2/repository/org/refactoringminer`.
 Use the refactoring analysis dump found [here](https://github.com/ualberta-smr/refactoring-analysis-results)
 to populate the original_analysis database. Use the database/intelliMerge_data1
 sql dump to populate intelliMerge_data1 database. Use the database/refactoringAwareMerging_dataset
-to populate refactoringAwareMerging_dataset database.
+to populate refactoringAwareMerging_dataset database. A description of how to populate the databases can be found 
+[here](https://github.com/ualberta-smr/RefactoringAwareMergingEvaluation/wiki/Datasets).
 
 ## IntelliMerge Replication
+
+### Using IntelliMerge
+
+This project comes with the version of IntelliMerge that we used to run the IntelliMerge replication, 
+found in our fork of IntelliMerge, https://github.com/max-ellis/IntelliMerge.git, at commit `5966f75`.
 
 ### Get IntelliMerge replication commits
 Run `python intelliMerge_data_resolver` to get the IntelliMerge commits used in
@@ -40,8 +47,8 @@ Edit the configuration tasks to have `:runIde` and include set `-Pmode=` to `rep
 
 ### Using IntelliMerge and RefMerge
 
-This project comes with the versions of IntelliMerge and RefMerge used in the paper. 
-The source code for the used version of IntelliMerge can be found here: https://github.com/max-ellis/IntelliMerge.git.
+This project comes with the versions of IntelliMerge and RefMerge used in the paper. The source code for 
+the version of IntelliMerge we used is the same as that in our IntelliMerge replication.
  If you would like to use a different version of IntelliMerge, build the respective IntelliMerge version 
 and copy and paste that version into the lib folder.
 
@@ -86,5 +93,6 @@ tools to determine the discrepancies.
 ### Results
 
 The zip file, database/refactoringAwareMerging_results.zip, contains the results from
- running the evaluation pipeline for RQ1.
+ running the evaluation pipeline for RQ1. A description of how to use these results can be 
+ found [here](https://github.com/ualberta-smr/RefactoringAwareMergingEvaluation/wiki/Datasets).
 results/manual_sampling_results has the results for RQ2. 
