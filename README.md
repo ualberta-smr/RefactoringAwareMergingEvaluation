@@ -68,7 +68,7 @@ it would look like `-PevaluationProject=error-prone` if you want to evaluate on 
 
 ### RQ1 data
 
-The projects we evaluated on can be found in the file `src/main/java/resources/refMerge_evaluation_projects`. A list of merge scenarios and their corresponding projects that we evaluated on are located in `src/main/java/resources/refMerge_evaluation_commits`.
+The projects we evaluated on can be found in the file `experiment_data/refMerge_evaluation_projects`. A list of merge scenarios and their corresponding projects that we evaluated on are located in `experiment_data/refMerge_evaluation_commits`.
 
 ### Running RQ1 experiment
 
@@ -97,7 +97,7 @@ place it crashed at.
 
 ### RQ2 data
 
-A list of merge scenarios and their corresponding projects that we used in RQ2 is stored in `src/main/java/resources/rq2_scenarios`.
+A list of merge scenarios and their corresponding projects that we used in RQ2 is stored in `experiment_data/rq2_scenarios`.
 
 ### Running RQ2 experiment
 
