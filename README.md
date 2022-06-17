@@ -44,7 +44,9 @@ Run `python intelliMerge_data_resolver` to get the IntelliMerge commits used in
 the IntelliMerge replication. 
 
 ### Edit configuration
-Edit the configuration tasks to have `:runIde` and include set `-Pmode=` to `replication`. 
+Edit the configuration tasks to have `:runIde -Pmode=comparison -PdataPath=path 
+-PevaluationProject=project`, where path is the path to the cloned test projects
+and project is the test project.
 
 ## RefactoringAwareMerging Comparison
 
