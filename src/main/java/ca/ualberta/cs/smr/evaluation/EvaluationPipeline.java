@@ -5,7 +5,6 @@ import ca.ualberta.cs.smr.evaluation.database.*;
 
 import com.intellij.openapi.application.ApplicationStarter;
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.javalite.activejdbc.Base;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,12 +29,12 @@ public class EvaluationPipeline implements ApplicationStarter {
             String mode = args.get(1);
             if(mode.equals("replication")) {
                 DatabaseUtils.createDatabase(false);
-                String path = System.getProperty("user.home") + args.get(2);
+                String path = System.getProperty("user.home") + "/" + args.get(2);
                 startIntelliMergeReplication(path);
             }
             else if(mode.equals("comparison")) {
                 DatabaseUtils.createDatabase(true);
-                String path = System.getProperty("user.home") + args.get(2);
+                String path = System.getProperty("user.home") +"/" + args.get(2);
                 String projectName = args.get(3);
                 startEvaluation(path, projectName);
             }
@@ -52,8 +51,8 @@ public class EvaluationPipeline implements ApplicationStarter {
      */
     private void startIntelliMergeReplication(String path) {
         try {
-            Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/intelliMerge_replication",
-                    "root", "password");
+            Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/intelliMerge_replication?serverTimezone=UTC",
+                    "username", "password");
             IntelliMergeReplication.runIntelliMergeReplication(path);
             Base.close();
         } catch (Throwable e) {
@@ -67,8 +66,8 @@ public class EvaluationPipeline implements ApplicationStarter {
      */
     private void startEvaluation(String path, String evaluationProject) {
         try {
-            Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/refMerge_evaluation",
-                    "root", "password");
+            Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/refMerge_evaluation?serverTimezone=UTC",
+                    "username", "password");
             RefMergeEvaluation evaluation = new RefMergeEvaluation();
             evaluation.runComparison(path, evaluationProject);
             Base.close();

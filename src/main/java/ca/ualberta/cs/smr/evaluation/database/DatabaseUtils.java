@@ -26,18 +26,18 @@ public class DatabaseUtils {
     public static void createDatabase(boolean isComparison) throws Exception {
         try {
             if(isComparison) {
-                Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/refMerge_evaluation",
-                        "root", "password");
+                Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/refMerge_evaluation?serverTimezone=UTC",
+                        "username", "password");
             }
             else {
-                Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/intelliMerge_replication",
-                        "root", "password");
+                Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/intelliMerge_replication?serverTimezone=UTC",
+                        "username", "password");
             }
             Base.close();
 
         } catch (InitException e) {
-            DB db = new DB("create_db").open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost",
-                    "root", "password");
+            DB db = new DB("create_db").open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost?serverTimezone=UTC",
+                    "username", "password");
 
             String dbName;
             if(isComparison) {
