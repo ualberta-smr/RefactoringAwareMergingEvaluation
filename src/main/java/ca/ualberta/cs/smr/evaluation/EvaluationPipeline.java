@@ -66,7 +66,7 @@ public class EvaluationPipeline implements ApplicationStarter {
      */
     private void startEvaluation(String path, String evaluationProject) {
         try {
-            Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/refMerge_evaluation?serverTimezone=UTC",
+            Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/refactoring_aware_evaluation?serverTimezone=UTC",
                     "username", "password");
             RefMergeEvaluation evaluation = new RefMergeEvaluation();
             evaluation.runComparison(path, evaluationProject);

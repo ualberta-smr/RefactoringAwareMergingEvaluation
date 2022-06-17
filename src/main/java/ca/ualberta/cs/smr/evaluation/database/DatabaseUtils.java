@@ -26,7 +26,7 @@ public class DatabaseUtils {
     public static void createDatabase(boolean isComparison) throws Exception {
         try {
             if(isComparison) {
-                Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/refMerge_evaluation?serverTimezone=UTC",
+                Base.open("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/refactoring_aware_evaluation?serverTimezone=UTC",
                         "username", "password");
             }
             else {
@@ -41,14 +41,14 @@ public class DatabaseUtils {
 
             String dbName;
             if(isComparison) {
-                dbName = "refMerge_evaluation";
+                dbName = "refactoring_aware_evaluation";
             }
             else {
                 dbName = "intelliMerge_replication";
             }
             if(isComparison) {
                 URL scriptInputStream = DatabaseUtils.class.getResource(CREATE_COMPARISON_SCHEMA_FILE);
-                DatabaseUtils.createDatabase(scriptInputStream.openStream(), db, "refMerge_evaluation", dbName);
+                DatabaseUtils.createDatabase(scriptInputStream.openStream(), db, "refactoring_aware_evaluation", dbName);
             }
             else {
                 URL scriptInputStream = DatabaseUtils.class.getResource(CREATE_REPLICATION_SCHEMA_FILE);

@@ -8,21 +8,21 @@ SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 
 -- -----------------------------------------------------
--- Schema refMerge_evaluation
+-- Schema refactoring_aware_evaluation
 -- -----------------------------------------------------
 
 -- -----------------------------------------------------
--- Schema refMerge_evaluation
+-- Schema refactoring_aware_evaluation
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `refMerge_evaluation` DEFAULT CHARACTER SET utf8 ;
-USE `refMerge_evaluation` ;
+CREATE SCHEMA IF NOT EXISTS `refactoring_aware_evaluation` DEFAULT CHARACTER SET utf8 ;
+USE `refactoring_aware_evaluation` ;
 
 -- -----------------------------------------------------
--- Table `refMerge_evaluation`.`project`
+-- Table `refactoring_aware_evaluation`.`project`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `refMerge_evaluation`.`project` ;
+DROP TABLE IF EXISTS `refactoring_aware_evaluation`.`project` ;
 
-CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`project` (
+CREATE TABLE IF NOT EXISTS `refactoring_aware_evaluation`.`project` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `url` VARCHAR(2000) NOT NULL,
   `name` VARCHAR(100) NULL,
@@ -32,11 +32,11 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `refMerge_evaluation`.`merge_commit`
+-- Table `refactoring_aware_evaluation`.`merge_commit`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `refMerge_evaluation`.`merge_commit` ;
+DROP TABLE IF EXISTS `refactoring_aware_evaluation`.`merge_commit` ;
 
-CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`merge_commit` (
+CREATE TABLE IF NOT EXISTS `refactoring_aware_evaluation`.`merge_commit` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `commit_hash` CHAR(40) NOT NULL,
   `is_conflicting` TINYINT(1) NOT NULL,
@@ -50,18 +50,18 @@ CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`merge_commit` (
   INDEX `fk_merge_commit_project_idx` (`project_id` ASC),
   CONSTRAINT `fk_merge_commit_project`
     FOREIGN KEY (`project_id`)
-    REFERENCES `refMerge_evaluation`.`project` (`id`)
+    REFERENCES `refactoring_aware_evaluation`.`project` (`id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `refMerge_evaluation`.`merge_result`
+-- Table `refactoring_aware_evaluation`.`merge_result`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `refMerge_evaluation`.`merge_result` ;
+DROP TABLE IF EXISTS `refactoring_aware_evaluation`.`merge_result` ;
 
-CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`merge_result` (
+CREATE TABLE IF NOT EXISTS `refactoring_aware_evaluation`.`merge_result` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `merge_tool` VARCHAR(45) NOT NULL,
   `total_conflicting_files` INT NOT NULL,
@@ -74,17 +74,17 @@ CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`merge_result` (
   INDEX `fk_merged_result_merge_commit1_idx` (`merge_commit_id` ASC, `project_id` ASC),
   CONSTRAINT `fk_conflicting_java_file_merge_commit1`
     FOREIGN KEY (`merge_commit_id` , `project_id`)
-    REFERENCES `refMerge_evaluation`.`merge_commit` (`id` , `project_id`)
+    REFERENCES `refactoring_aware_evaluation`.`merge_commit` (`id` , `project_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 -- -----------------------------------------------------
--- Table `refMerge_evaluation`.`refactoring_conflict`
+-- Table `refactoring_aware_evaluation`.`refactoring_conflict`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `refMerge_evaluation`.`refactoring_conflict` ;
+DROP TABLE IF EXISTS `refactoring_aware_evaluation`.`refactoring_conflict` ;
 
-CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`refactoring_conflict` (
+CREATE TABLE IF NOT EXISTS `refactoring_aware_evaluation`.`refactoring_conflict` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `left_old_path` VARCHAR(1000) NOT NULL,
   `right_old_path` VARCHAR(1000) NOT NULL,
@@ -101,17 +101,17 @@ CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`refactoring_conflict` (
   INDEX `fk_refactoring_conflict_merge_result1_idx` (`merge_result_id` ASC, `merge_commit_id` ASC, `project_id` ASC),
   CONSTRAINT `fk_refactoring_conflict_merge_result1`
     FOREIGN KEY (`merge_result_id` , `merge_commit_id` , `project_id`)
-    REFERENCES `refMerge_evaluation`.`merge_result` (`id` , `merge_commit_id` , `project_id`)
+    REFERENCES `refactoring_aware_evaluation`.`merge_result` (`id` , `merge_commit_id` , `project_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 ---- -----------------------------------------------------
----- Table `refMerge_evaluation`.`file_statistics`
+---- Table `refactoring_aware_evaluation`.`file_statistics`
 ---- -----------------------------------------------------
---DROP TABLE IF EXISTS `refMerge_evaluation`.`file_statistics` ;
+--DROP TABLE IF EXISTS `refactoring_aware_evaluation`.`file_statistics` ;
 --
---CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`file_statistics` (
+--CREATE TABLE IF NOT EXISTS `refactoring_aware_evaluation`.`file_statistics` (
 --  `id` INT NOT NULL AUTO_INCREMENT,
 --  `merge_tool` VARCHAR(45) NOT NULL,
 --  `path` VARCHAR(1000) NOT NULL,
@@ -128,18 +128,18 @@ ENGINE = InnoDB;
 --  INDEX `fk_file_statistics_merge_result1_idx` (`merge_result_id` ASC, `merge_commit_id` ASC, `project_id` ASC),
 --  CONSTRAINT `fk_file_statistics_merge_result1`
 --    FOREIGN KEY (`merge_result_id` , `merge_commit_id` , `project_id`)
---    REFERENCES `refMerge_evaluation`.`merge_result` (`id` , `merge_commit_id` , `project_id`)
+--    REFERENCES `refactoring_aware_evaluation`.`merge_result` (`id` , `merge_commit_id` , `project_id`)
 --    ON DELETE CASCADE
 --    ON UPDATE CASCADE)
 --ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `refMerge_evaluation`.`conflicting_file`
+-- Table `refactoring_aware_evaluation`.`conflicting_file`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `refMerge_evaluation`.`conflicting_file` ;
+DROP TABLE IF EXISTS `refactoring_aware_evaluation`.`conflicting_file` ;
 
-CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`conflicting_file` (
+CREATE TABLE IF NOT EXISTS `refactoring_aware_evaluation`.`conflicting_file` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `merge_tool` VARCHAR(45) NOT NULL,
   `path` VARCHAR(1000) NOT NULL,
@@ -152,18 +152,18 @@ CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`conflicting_file` (
   INDEX `fk_conflicting_file_merge_result1_idx` (`merge_result_id` ASC, `merge_commit_id` ASC, `project_id` ASC),
   CONSTRAINT `fk_conflicting_file_merge_result1`
     FOREIGN KEY (`merge_result_id` , `merge_commit_id` , `project_id`)
-    REFERENCES `refMerge_evaluation`.`merge_result` (`id` , `merge_commit_id` , `project_id`)
+    REFERENCES `refactoring_aware_evaluation`.`merge_result` (`id` , `merge_commit_id` , `project_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `refMerge_evaluation`.`conflict_block`
+-- Table `refactoring_aware_evaluation`.`conflict_block`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `refMerge_evaluation`.`conflict_block` ;
+DROP TABLE IF EXISTS `refactoring_aware_evaluation`.`conflict_block` ;
 
-CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`conflict_block` (
+CREATE TABLE IF NOT EXISTS `refactoring_aware_evaluation`.`conflict_block` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `path` VARCHAR(1000) NOT NULL,
   `conflicting_loc` INT NOT NULL,
@@ -180,18 +180,18 @@ CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`conflict_block` (
   INDEX `fk_conflict_block_conflicting_file1_idx` (`conflicting_file_id` ASC, `merge_result_id` ASC, `merge_commit_id` ASC, `project_id` ASC),
   CONSTRAINT `fk_conflict_block_conflicting_file1`
     FOREIGN KEY (`conflicting_file_id` , `merge_result_id` , `merge_commit_id` , `project_id`)
-    REFERENCES `refMerge_evaluation`.`conflicting_file` (`id` , `merge_result_id` , `merge_commit_id` , `project_id`)
+    REFERENCES `refactoring_aware_evaluation`.`conflicting_file` (`id` , `merge_result_id` , `merge_commit_id` , `project_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
--- Table `refMerge_evaluation`.`refactoring`
+-- Table `refactoring_aware_evaluation`.`refactoring`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `refMerge_evaluation`.`refactoring` ;
+DROP TABLE IF EXISTS `refactoring_aware_evaluation`.`refactoring` ;
 
-CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`refactoring` (
+CREATE TABLE IF NOT EXISTS `refactoring_aware_evaluation`.`refactoring` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `refactoring_type` VARCHAR(100) NULL,
   `refactoring_detail` VARCHAR(2000) NULL,
@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS `refMerge_evaluation`.`refactoring` (
   INDEX `fk_refactoring_merge_commit1_idx` (`merge_commit_id` ASC, `project_id` ASC),
   CONSTRAINT `fk_refactoring_merge_commit1`
     FOREIGN KEY (`merge_commit_id` , `project_id`)
-    REFERENCES `refMerge_evaluation`.`merge_commit` (`id` , `project_id`)
+    REFERENCES `refactoring_aware_evaluation`.`merge_commit` (`id` , `project_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
