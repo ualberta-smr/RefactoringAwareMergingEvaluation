@@ -161,7 +161,7 @@ public class RefMergeEvaluation {
                     rightParent, proj, Long.parseLong(values[4]));
             mergeCommit.saveIt();
         }
-        String resultDir = "/mnt/DATA/temp/results/" + project.getName() + "/" + "commit" + mergeCommit.getId();
+        String resultDir = System.getProperty("user.home") + "/results/" + project.getName() + "/" + "commit" + mergeCommit.getId();
 
         String refMergePath = resultDir + "/refMerge";
         String gitMergePath = resultDir + "/git";
