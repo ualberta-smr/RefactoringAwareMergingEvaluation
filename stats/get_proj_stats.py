@@ -39,6 +39,17 @@ def plot_boxplot():
     #plt.setp(ax.xaxis.get_majorticklabels(), rotation=-30, ha="left", rotation_mode="anchor")
 
     plt.savefig('detailed_proj_stats.pdf')
+    plt.clf()
+    plt.cla()
+
+def plot_involved_ratio():
+    #create boxplot for ratio alone
+    data = pd.read_csv("DetailedProjStats.csv")
+    sns.boxplot(x='Project Name', y='Involved Ratio', data=data, showfliers = False)
+    plt.xticks(rotation=-30, rotation_mode="anchor")
+    plt.rc('xtick', labelsize=8)
+    plt.savefig('involved_refactoring_ratio_block.pdf')
 
 
 plot_boxplot()
+plot_involved_ratio()
