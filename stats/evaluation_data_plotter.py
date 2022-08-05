@@ -8,19 +8,19 @@ import matplotlib.ticker as ticker
 
 from evaluation_data_resolver import get_data_frame
 
-REFMERGE = "purple"
-GIT = "red"
-INTELLIMERGE = "orange"
+REFMERGE = "0.966"
+GIT = "0.65"
+INTELLIMERGE = "0.4"
 DISTANCE = 0.3
 
 def set_box_color(bp, color, linestyle):
-    plt.setp(bp['boxes'], color=color, linestyle=linestyle)
-    plt.setp(bp['whiskers'], color=color, linestyle=linestyle)
-    plt.setp(bp['caps'], color=color)
-    plt.setp(bp['medians'], color=color)
+    plt.setp(bp['boxes'], color="black")
+    plt.setp(bp['whiskers'], color="black")
+    plt.setp(bp['caps'], color="black")
+    plt.setp(bp['medians'], color="black")
     
     for patch in bp['boxes']:
-        patch.set(facecolor='white')
+        patch.set(facecolor=color)
 
 def wilcoxon_test(x2, x1):
     
@@ -200,6 +200,7 @@ def plot_conflicting_files_with_comments_by_project():
 
         refMerge_list = list(filter(lambda a: a > -1, refMerge_list))
         intelliMerge_list = list(filter(lambda a: a > -1, intelliMerge_list))
+
 
         print(group)
         print('RefMerge Median: ', np.median(refMerge_p))
@@ -492,7 +493,8 @@ def plot_conflicting_loc_per_block_with_comments_stats():
 
     plt.xticks(range(0, len(labels)), labels)
     plt.rc('xtick', labelsize=8)
-
+    ax.set_ylabel('Conflicting LOC/Block')
+    ax.yaxis.label.set_size(32)
     ax.tick_params(axis='both', which='major', labelsize=38)
     plt.tick_params(axis = "x", which = "both", bottom = False)
 
@@ -804,8 +806,8 @@ def plot_conflict_blocks_with_comments_by_project():
         intelliMerge_list = list(filter(lambda a: a > -1, intelliMerge_list))
 
         print(group)
-        print('RefMerge Median: ', np.median(refMerge_p))
-        print('IntelliMerge Median: ', np.median(intelliMerge_p))
+        print('RefMerge Median: ', np.median(refMerge_list))
+        print('IntelliMerge Median: ', np.median(intelliMerge_list))
         print('Git Median: ', np.median(git_p))
         print("refMerge, git:", w1, p1)
         print("intelliMerge, git:", w2, p2)
@@ -1047,7 +1049,6 @@ def plot_discrepancies_between_tools():
 
     f.close()
 
-
 plot_functions = [x for x in dir() if x[:5] == 'plot_']
 f = open("results.tex", "w+")
 f.close()
@@ -1060,6 +1061,7 @@ while True:
     if inp < 1 or inp > len(plot_functions):
         break
     locals()[plot_functions[inp - 1]]()
+
 
 
 
