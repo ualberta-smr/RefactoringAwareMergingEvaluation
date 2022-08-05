@@ -32,6 +32,19 @@ public class Matrix {
        put(RefactoringType.MOVE_RENAME_CLASS, new MoveRenameClassDispatcher());
        put(RefactoringType.EXTRACT_OPERATION, new ExtractMethodDispatcher());
        put(RefactoringType.INLINE_OPERATION, new InlineMethodDispatcher());
+       put(RefactoringType.RENAME_ATTRIBUTE, new MoveRenameFieldDispatcher());
+       put(RefactoringType.MOVE_ATTRIBUTE, new MoveRenameFieldDispatcher());
+       put(RefactoringType.MOVE_RENAME_ATTRIBUTE, new MoveRenameFieldDispatcher());
+       put(RefactoringType.PULL_UP_OPERATION, new PullUpMethodDispatcher());
+       put(RefactoringType.PUSH_DOWN_OPERATION, new PushDownMethodDispatcher());
+       put(RefactoringType.PULL_UP_ATTRIBUTE, new PullUpFieldDispatcher());
+       put(RefactoringType.PUSH_DOWN_ATTRIBUTE, new PushDownFieldDispatcher());
+       put(RefactoringType.RENAME_PACKAGE, new RenamePackageDispatcher());
+       put(RefactoringType.RENAME_PARAMETER, new RenameParameterDispatcher());
+       put(RefactoringType.ADD_PARAMETER, new AddParameterDispatcher());
+       put(RefactoringType.REMOVE_PARAMETER, new RemoveParameterDispatcher());
+       put(RefactoringType.REORDER_PARAMETER, new ReorderParameterDispatcher());
+       put(RefactoringType.CHANGE_PARAMETER_TYPE, new ChangeParameterTypeDispatcher());
     }};
 
     /*
@@ -48,6 +61,19 @@ public class Matrix {
         put(RefactoringType.MOVE_RENAME_CLASS, new MoveRenameClassReceiver());
         put(RefactoringType.EXTRACT_OPERATION, new ExtractMethodReceiver());
         put(RefactoringType.INLINE_OPERATION, new InlineMethodReceiver());
+        put(RefactoringType.RENAME_ATTRIBUTE, new MoveRenameFieldReceiver());
+        put(RefactoringType.MOVE_ATTRIBUTE, new MoveRenameFieldReceiver());
+        put(RefactoringType.MOVE_RENAME_ATTRIBUTE, new MoveRenameFieldReceiver());
+        put(RefactoringType.PULL_UP_OPERATION, new PullUpMethodReceiver());
+        put(RefactoringType.PUSH_DOWN_OPERATION, new PushDownMethodReceiver());
+        put(RefactoringType.PULL_UP_ATTRIBUTE, new PullUpFieldReceiver());
+        put(RefactoringType.PUSH_DOWN_ATTRIBUTE, new PushDownFieldReceiver());
+        put(RefactoringType.RENAME_PACKAGE, new RenamePackageReceiver());
+        put(RefactoringType.RENAME_PARAMETER, new RenameParameterReceiver());
+        put(RefactoringType.ADD_PARAMETER, new AddParameterReceiver());
+        put(RefactoringType.REMOVE_PARAMETER, new RemoveParameterReceiver());
+        put(RefactoringType.REORDER_PARAMETER, new ReorderParameterReceiver());
+        put(RefactoringType.CHANGE_PARAMETER_TYPE, new ChangeParameterTypeReceiver());
     }};
 
     public Matrix(Project project) {
@@ -197,6 +223,15 @@ public class Matrix {
         vector.add(RefactoringType.MOVE_RENAME_CLASS);
         vector.add(RefactoringType.EXTRACT_OPERATION);
         vector.add(RefactoringType.INLINE_OPERATION);
+        vector.add(RefactoringType.RENAME_ATTRIBUTE);
+        vector.add(RefactoringType.MOVE_ATTRIBUTE);
+        vector.add(RefactoringType.MOVE_RENAME_ATTRIBUTE);
+        vector.add(RefactoringType.PULL_UP_OPERATION);
+        vector.add(RefactoringType.PUSH_DOWN_OPERATION);
+        vector.add(RefactoringType.PULL_UP_ATTRIBUTE);
+        vector.add(RefactoringType.PUSH_DOWN_ATTRIBUTE);
+        vector.add(RefactoringType.RENAME_PACKAGE);
+        vector.add(RefactoringType.RENAME_PARAMETER);
 
         Enumeration<RefactoringType> enumeration = vector.elements();
         int value = 0;

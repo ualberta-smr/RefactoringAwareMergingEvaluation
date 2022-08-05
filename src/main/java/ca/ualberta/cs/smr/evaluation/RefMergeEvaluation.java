@@ -39,6 +39,7 @@ public class RefMergeEvaluation {
      */
     public void runComparison(String path, String evaluationProject) throws IOException {
         URL url = EvaluationPipeline.class.getResource("/refMerge_evaluation_projects");
+        assert url != null;
         InputStream inputStream = url.openStream();
         ArrayList<String> lines = Utils.getLinesFromInputStream(inputStream);
         String projectUrl;
@@ -59,8 +60,6 @@ public class RefMergeEvaluation {
                 GitRepositoryManager repoManager = GitRepositoryManager.getInstance(project);
                 List<GitRepository> repos = repoManager.getRepositories();
                 if(repos.size() == 0) {
-                    // Why does this fail?
-                    // Does it load the project properly?
                     VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(path + "/" + projectName + "/.git");
                     GitRepositoryManager.getInstance(project).updateRepository(virtualFile);
                     assert virtualFile != null;
@@ -129,9 +128,6 @@ public class RefMergeEvaluation {
         gitUtils.checkout(mergeCommitHash);
         Utils.reparsePsiFiles(project);
         Utils.dumbServiceHandler(project);
-        // Save the manually merged version
-        Utils.reparsePsiFiles(project);
-        Utils.dumbServiceHandler(project);
         String rightParent = values[2];
         String leftParent = values[3];
         String baseCommit = gitUtils.getBaseCommit(leftParent, rightParent);
@@ -161,7 +157,7 @@ public class RefMergeEvaluation {
                     rightParent, proj, Long.parseLong(values[4]));
             mergeCommit.saveIt();
         }
-        String resultDir = "/mnt/DATA/temp/results/" + project.getName() + "/" + "commit" + mergeCommit.getId();
+        String resultDir = System.getProperty("user.home") + "/results/" + project.getName() + "/" + "commit" + mergeCommit.getId();
 
         String refMergePath = resultDir + "/refMerge";
         String gitMergePath = resultDir + "/git";
@@ -183,6 +179,7 @@ public class RefMergeEvaluation {
         commits.add(leftParent);
         commits.add(baseCommit);
         commits.add(rightParent);
+
         long intelliMergeRuntime = runIntelliMerge(project.getBasePath(), commits, intelliMergePath, mergeCommitHash);
         DumbService.getInstance(project).completeJustSubmittedTasks();
         // Run RefMerge
@@ -327,7 +324,6 @@ public class RefMergeEvaluation {
                     conflictBlock.saveIt();
                 }
             }
-
         }
 
         Utils.clearTemp(gitMergePath);
@@ -362,13 +358,19 @@ public class RefMergeEvaluation {
             conflicts = refMerging.refMerge(leftParent, rightParent, project, repo, refactorings);
         }
         catch(AssertionError | OutOfMemoryError | LargeObjectException.OutOfMemory e) {
+            if(!refactorings.isEmpty()) {
+                recordRefactorings(refactorings, mergeCommit);
+            }
             e.printStackTrace();
         }
         long time2 = System.currentTimeMillis();
-        // If RefMerge crashes
-        if(conflicts == null || (time2 - time) > 799999) {
+        // If RefMerge times out
+        if(conflicts == null || (time2 - time) > 900000) {
             time = -1;
             System.out.println("RefMerge timed out");
+            if(!refactorings.isEmpty()) {
+                recordRefactorings(refactorings, mergeCommit);
+            }
             return Pair.of(new ArrayList<>(), time);
         }
         System.out.println("RefMerge is done");
@@ -443,10 +445,10 @@ public class RefMergeEvaluation {
      * Record each refactoring that was detected by RefactoringMiner
      */
     private void recordRefactorings(List<Refactoring> refactorings, MergeCommit mergeCommit) {
-        for(Refactoring refactoring : refactorings) {
+        for (Refactoring refactoring : refactorings) {
             String refactoringType = refactoring.getRefactoringType().toString();
             String refactoringDetail = refactoring.toString();
-            if(refactoringDetail.length() > 1999) {
+            if (refactoringDetail.length() > 1999) {
                 refactoringDetail = refactoringDetail.substring(0, 1999);
             }
             ca.ualberta.cs.smr.evaluation.database.Refactoring refactoringRecord =
@@ -454,5 +456,4 @@ public class RefMergeEvaluation {
             refactoringRecord.saveIt();
         }
     }
-
 }

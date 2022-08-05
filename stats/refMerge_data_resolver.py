@@ -1,4 +1,6 @@
 import pandas as pd
+import git
+import shutil
 from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,12 +11,14 @@ from scipy.stats import ranksums
 import math
 
 
+
+
 d3 = {}
 d4 = {}
 
 
 def get_db_connection():
-    username = 'root'
+    username = 'username'
     password = "password"
     database_name = 'refMerge_dataset'
     server = '127.0.0.1'
@@ -72,8 +76,6 @@ supported_types = ['Rename Class', 'Rename Method', 'Move Class', 'Move Method',
 
 unsupported_types = ['Change Package', 'Extract And Move Method', 'Move Field', 'Rename Parameter', 'Pull Up Field', 'Pull Up Method', 'Push Down Method', 'Push Down Field', 'Add Parameter', 'Change Parameter Type', 'Rename Package', 'Move Source Folder']
 
-
-
 def write_to_projects_file(project_url):
     f = open('refMerge_evaluation_projects', 'r')
     lines = f.read()
@@ -99,16 +101,15 @@ def write_to_csv(project_url, merge_commit_hash):
         open_file.write(entry + '\n')
 
 def write_to_evaluation_csv(entry):
-    f = open('refMerge_evaluation_commits', 'r')
-    lines = f.read()
-    f.close()
-    with open('refMerge_evaluation_commits', 'a') as f:
-        if entry in lines:
-            return 1
-        f.write(entry + '\n')
+   f = open('refMerge_evaluation_commits', 'r')
+   lines = f.read()
+   f.close()
+   with open('refMerge_evaluation_commits', 'a') as f:
+       if entry in lines:
+           return 1
+       f.write(entry + '\n')
 
-    return 0
-
+   return 0
 
 
 def get_refactoring_types_sql_condition():
@@ -152,6 +153,23 @@ def get_project_url(merge_commit_id):
     query = "SELECT * FROM project WHERE id ='{}'".format(project_id)
     df = pd.read_sql(query, get_db_connection())
     return df.iloc[0]['url']
+
+def get_conflict_block_by_id(conflict_block_id):
+    query = "SELECT * FROM conflicting_region WHERE id = '{}'".format(conflict_block_id)
+    df = pd.read_sql(query, get_db_connection())
+    return df.iloc[0] 
+
+
+def get_conflict_blocks_by_mc_id(merge_commit_id):
+    query = "SELECT * FROM conflicting_region WHERE merge_commit_id = '{}'".format(merge_commit_id)
+    df = pd.read_sql(query, get_db_connection())
+    return df 
+
+def get_conflicting_java_files_by_mc_id(merge_commit_id):
+    query = "SELECT * FROM conflicting_java_file WHERE merge_commit_id = '{}'".format(merge_commit_id)
+    df = pd.read_sql(query, get_db_connection())
+    return df 
+
 
 def get_merge_commit_hash(merge_commit_id):
     query = "SELECT * FROM merge_commit WHERE id = '{}'".format(merge_commit_id)
@@ -201,6 +219,98 @@ def get_accepted_refactoring_regions():
         .format(get_refactoring_types_sql_condition())
     return pd.read_sql(query, get_db_connection())
 
+
+def get_merge_scenarios_with_refactoring_conflicts_stats():
+
+    conflicting_region_histories = get_conflicting_region_histories()
+    refactoring_regions = get_refactoring_regions()
+
+    df = pd.DataFrame(columns=['Project Name', 'Merge Scenario', 'Conflicting Java Files', 'Conflict Blocks',
+    'Conflicting LOC', 'Involved Conflict Blocks', 'Involved Conflicting LOC', 'Involved Refactorings',
+    'Involved Refactoring Ratio', 'is_potentially_fully_resolvable', 'Total Commits', 'Total Diff Files'])
+
+
+
+    rr_grouped_by_project = refactoring_regions.groupby('project_id')
+    involved_refactoring_counter = 0
+    for project_id, project_crh in conflicting_region_histories.groupby('project_id'):
+        project_name = get_project_name_by_id(project_id)
+
+        if project_id in rr_grouped_by_project.groups:
+            print('Processing project {}'.format(project_id))
+
+            # Clone Project
+            git_url = get_project_by_id(project_id)
+            repo_dir = "git_projects"
+            repo = git.Repo.clone_from(git_url, repo_dir)
+
+            project_rrs = rr_grouped_by_project.get_group(project_id)
+            crh_rr_combined = pd.merge(project_crh.reset_index(), project_rrs.reset_index(), on='commit_hash',
+                                       how='inner')
+            crh_with_involved_refs = crh_rr_combined[crh_rr_combined.apply(record_involved, axis=1)]
+
+            mc_id_crh_involved = crh_with_involved_refs.groupby('merge_commit_id')
+            for mc_id in mc_id_crh_involved.groups:
+
+                merge_commit = get_merge_commit(mc_id)
+                left_parent_hash = merge_commit['parent_1']
+                right_parent_hash = merge_commit['parent_2']
+                cmd = left_parent_hash + '...' + right_parent_hash
+
+                total_commits = repo.git.rev_list('--count', cmd)
+                left_parent = repo.rev_parse(left_parent_hash)
+                right_parent = repo.rev_parse(right_parent_hash)
+                base_commit = repo.merge_base(left_parent, right_parent)[0]
+                left_diff_files = set(repo.git.diff('--name-only',  base_commit, left_parent_hash, '--', '***.java').splitlines())
+                right_diff_files = set(repo.git.diff('--name-only',  base_commit, right_parent_hash, '--', '***.java').splitlines())
+                diff_files = len(left_diff_files.intersection(right_diff_files))
+                diff_files = len(left_diff_files.union(right_diff_files))
+                print(diff_files)
+                files = []
+                group = mc_id_crh_involved.get_group(mc_id)
+                
+                merge_scenario = get_merge_commit_hash(mc_id)
+
+                conflicting_java_files = get_conflicting_java_files_by_mc_id(mc_id)
+                conflict_blocks = get_conflict_blocks_by_mc_id(mc_id)
+                num_conflicting_java_files = len(conflicting_java_files)
+                num_conflict_blocks = len(conflict_blocks)
+
+                num_involved_refs = len(group)
+                involved_conflicts = group['conflicting_region_id'].unique()
+                num_involved_conflicts = len(involved_conflicts)
+                
+                num_conflicting_loc = 0
+                for cb_id in conflict_blocks.iloc:
+                    p1_length = cb_id['parent_1_length']
+                    p2_length = cb_id['parent_2_length']
+                    num_conflicting_loc += p1_length + p2_length
+
+
+                num_involved_conflicting_loc = 0
+                for ic_id in involved_conflicts:
+                    conflict_block = get_conflict_block_by_id(ic_id)
+                    p1_length = conflict_block['parent_1_length']
+                    p2_length = conflict_block['parent_2_length']
+                    num_involved_conflicting_loc += p1_length + p2_length
+
+                is_fully_resolvable = False
+                if num_conflict_blocks == num_involved_conflicts:
+                    is_fully_resolvable = True
+
+                involved_ref_ratio = num_involved_refs / num_involved_conflicts
+
+                df = df.append({'Project Name': project_name, 'Merge Scenario': merge_scenario, 'Conflicting Java Files': num_conflicting_java_files,
+                    'Conflict Blocks': num_conflict_blocks, 'Conflicting LOC': num_conflicting_loc, 'Involved Conflict Blocks': num_involved_conflicts,
+                    'Involved Conflicting LOC': num_involved_conflicting_loc, 'Involved Refactorings': num_involved_refs,
+                    'Involved Refactoring Ratio': involved_ref_ratio, 'is_potentially_fully_resolvable': is_fully_resolvable,
+                    'Total Commits': total_commits, 'Total Diff Files': diff_files}, ignore_index=True)
+
+            # Delete Project
+            shutil.rmtree(repo_dir)
+
+    df.to_csv("DetailedProjStats.csv")
+    return df
 
 
 def get_merge_commit_by_involved_refactorings():
@@ -271,6 +381,7 @@ def graph(d, title):
     plt.savefig(title + '.pdf')
 
 
+
 def graph_refactoring_types():
     r_rt = get_refactorings().groupby('refactoring_type')
     d = {}
@@ -316,4 +427,5 @@ def get_data_frame(df_name):
         return df
 
 if __name__ == '__main__':
-    get_data_frame('merge_commit_by_involved_refactorings')
+    get_data_frame('merge_scenarios_with_refactoring_conflicts_stats')
+#    get_data_frame('merge_commit_by_involved_refactorings')

@@ -1,6 +1,6 @@
 <idea-plugin>
     <id>ca.ualberta.cs.smr</id>
-    <name>RefMerge</name>
+    <name>RefactoringAwareEvaluation</name>
     <vendor>University of Alberta</vendor>
 
     <description>
@@ -15,7 +15,6 @@
     <depends>Git4Idea</depends>
 
 <!--    <extensions defaultExtensionNs="com.intellij">-->
-<!--        &lt;!&ndash; Add your extensions here &ndash;&gt;-->
 <!--        <appStarter implementation="ca.ualberta.cs.smr.refmerge.Evaluation"/>-->
 <!--    </extensions>-->
 
@@ -25,10 +24,10 @@
     </extensions>
 
     <actions>
-        <action id="RefMerge" class="ca.ualberta.cs.smr.refmerge.RefMerge" text="RunRefMerge"
-                description="RunRefMerge will run RefMerge, merging the parent commits while considering the refactoring semantics" >
-            <add-to-group group-id="ToolsMenu" anchor="first"/>
-        </action>
+<!--        <action id="RefMerge" class="ca.ualberta.cs.smr.refmerge.RefMerge" text="RunRefMerge"-->
+<!--                description="RunRefMerge will run RefMerge, merging the parent commits while considering the refactoring semantics" >-->
+<!--            <add-to-group group-id="ToolsMenu" anchor="first"/>-->
+<!--        </action>-->
 <!--        <action id="ca.ualberta.cs.smr.PipelineAction" class="ca.ualberta.cs.smr.evaluation.PipelineAction" text="RunEvaluationPipeline"-->
 <!--                description="Will run evaluation pipeline" >-->
 <!--            <add-to-group group-id="ToolsMenu" anchor="first"/>-->

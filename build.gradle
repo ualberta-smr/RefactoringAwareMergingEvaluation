@@ -68,7 +68,7 @@ patchPluginXml {
 
 tasks {
     runIde {
-        runIde.jvmArgs '-Djava.awt.headless=true', '-Xss40m'
+        runIde.jvmArgs '-Djava.awt.headless=true', '-Xss100m', '-Xmx16g'
         if (project.hasProperty("mode")) {
             Object x = project.findProperty("mode")
             Object y = project.findProperty("dataPath")

@@ -50,6 +50,64 @@ public class ReplayRefactorings {
                         exception.printStackTrace();
                     }
                     break;
+                case RENAME_ATTRIBUTE:
+                case MOVE_ATTRIBUTE:
+                case MOVE_RENAME_ATTRIBUTE:
+                    try {
+                        ReplayMoveRenameField replayMoveRenameField = new ReplayMoveRenameField(project);
+                        replayMoveRenameField.replayRenameField(refactoringObject);
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                    }
+                    break;
+                case PULL_UP_OPERATION:
+                    try {
+                        ReplayPullUpMethod replayPullUpMethod = new ReplayPullUpMethod(project);
+                        replayPullUpMethod.replayPullUpMethod(refactoringObject);
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                    }
+                    break;
+                case PUSH_DOWN_OPERATION:
+                    try {
+                        ReplayPushDownMethod replayPushDownMethod = new ReplayPushDownMethod(project);
+                        replayPushDownMethod.replayPushDownMethod(refactoringObject);
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                    }
+                    break;
+                case PULL_UP_ATTRIBUTE:
+                    try {
+                        ReplayPullUpField replayPullUpField = new ReplayPullUpField(project);
+                        replayPullUpField.replayPullUpField(refactoringObject);
+                    } catch(Exception exception) {
+                        exception.printStackTrace();
+                    }
+                    break;
+                case PUSH_DOWN_ATTRIBUTE:
+                    try {
+                        ReplayPushDownField replayPushDownField = new ReplayPushDownField(project);
+                        replayPushDownField.replayPushDownField(refactoringObject);
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                    }
+                    break;
+                case RENAME_PACKAGE:
+                    try {
+                        ReplayRenamePackage replayRenamePackage = new ReplayRenamePackage(project);
+                        replayRenamePackage.replayRenamePackage(refactoringObject);
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                    }
+                    break;
+                case RENAME_PARAMETER:
+                    try {
+                        ReplayRenameParameter replayRenameParameter = new ReplayRenameParameter(project);
+                        replayRenameParameter.replayRenameParameter(refactoringObject);
+                    } catch(Exception exception) {
+                        exception.printStackTrace();
+                    }
+                    break;
             }
 
         }

@@ -16,9 +16,9 @@ unsupported_types = ['CHANGE_PACKAGE', 'MOVE_ATTRIBUTE', 'RENAME_ATTRIBUTE', 'PU
 
 
 def get_db_connection():
-    username = 'root'
+    username = 'username'
     password = "password"
-    database_name = 'refMerge_evaluation'
+    database_name = 'refactoring_aware_evaluation'
     server = '127.0.0.1'
 
     return create_engine('mysql+pymysql://{}:{}@{}/{}'.format(username, password, server, database_name))
@@ -101,6 +101,11 @@ def get_project_by_id(project_id):
     df = pd.read_sql(query, get_db_connection())
     return df.iloc[0]['name']
 
+def get_project_url_by_id(project_id):
+    query = "SELECT * FROM project WHERE id = '{}'".format(project_id)
+    df = pd.read_sql(query, get_db_connection())
+    return df.iloc[0]['url']
+
 def get_project_url(merge_commit_id):
     query = "SELECT * FROM merge_commit WHERE id = '{}'".format(merge_commit_id)
     df = pd.read_sql(query, get_db_connection())
@@ -178,6 +183,15 @@ def get_accepted_refactoring_regions():
     query = 'select * from refactoring_region where refactoring_id in (select id from refactoring where ({}))'\
         .format(get_refactoring_types_sql_condition())
     return pd.read_sql(query, get_db_connection())
+
+def get_merge_commit(merge_commit_id):
+    query = "SELECT * FROM merge_commit WHERE id = '{}'".format(merge_commit_id)
+    df = pd.read_sql(query, get_db_connection())
+    return df.iloc[0]
+
+
+def get_percentage(value, total):
+    return " (" + "{:.0%}".format(value / total) + ")"
 
 def get_statistics_per_scenario():
 
@@ -512,25 +526,36 @@ def get_discrepancies_between_tools():
                 'r_runtime': r_runtime, 'i_runtime': i_runtime}, ignore_index=True)
     return df
 
-def get_sampling_scenarios():
+def get_res_sampling_scenarios():
     df = get_data_frame('discrepancies_between_tools')
 
     both_resolve = []
     both_reduce = []
     both_increase = []
+    both_time_out = []
 
     intelliMerge_better_resolves = []
     intelliMerge_better_files = []
     intelliMerge_better_blocks = []
     intelliMerge_better_loc =[]
+    intelliMerge_times_out = []
 
     refMerge_better_resolves = []
     refMerge_better_files = []
     refMerge_better_blocks = []
     refMerge_better_loc = []
+    refMerge_times_out = []
     for _, row in df.iterrows():
-        if row['i_runtime'] == "-1" or row['r_runtime'] == "-1":
+        if row['i_blocks'] == -1 and row['r_blocks'] == -1:
+            both_time_out.append(row)
             continue
+        elif row['i_blocks'] == -1 and row['r_blocks'] != -1:
+            intelliMerge_times_out.append(row)
+            continue
+        elif row['r_blocks'] == -1 and row['i_blocks'] != -1:
+            refMerge_times_out.append(row)
+            continue
+
 
         if row['i_blocks'] == row['r_blocks'] and row['i_blocks'] > row['g_blocks']:
             both_increase.append(row)
@@ -555,12 +580,16 @@ def get_sampling_scenarios():
         elif row['i_loc'] > row['r_loc'] and row['r_loc'] < row['g_loc']:
             refMerge_better_loc.append(row)
 
-    project_ids = [0] * 20
+    project_ids = [0] * 23
     merge_commit_ids = []
+
+    #get_random_scenarios(both_time_out, project_ids, 1, merge_commit_ids)
+    #get_random_scenarios(refMerge_times_out, project_ids, 1, merge_commit_ids)
+    #get_random_scenarios(intelliMerge_times_out, project_ids, 1, merge_commit_ids)
 
     get_random_scenarios(both_resolve, project_ids, 3, merge_commit_ids)
     get_random_scenarios(both_reduce, project_ids, 3, merge_commit_ids)
-    get_random_scenarios(both_increase, project_ids, 5, merge_commit_ids)
+    get_random_scenarios(both_increase, project_ids, 4, merge_commit_ids)
 
     get_random_scenarios(intelliMerge_better_resolves, project_ids, 5, merge_commit_ids)
     get_random_scenarios(intelliMerge_better_files, project_ids, 5, merge_commit_ids)
@@ -574,10 +603,19 @@ def get_sampling_scenarios():
 
     print(merge_commit_ids)
     merge_commit_ids.sort()
+
+    df = pd.DataFrame(columns=['project_name','merge_commit_hash'])
+    for merge_commit_id in merge_commit_ids:
+        commit_hash = get_merge_commit_hash(merge_commit_id)
+        project_name = get_project_by_id(get_project_id_by_url(get_project_url(merge_commit_id)))
+        df = df.append({'project_name':project_name, 'merge_commit_hash':commit_hash}, ignore_index = True)
+
+
     print(merge_commit_ids)
+    df.to_csv('manual_sampling_scenarios.csv')
 
 def get_random_scenarios(list, project_ids, num, merge_commit_ids):
-    np.random.seed(338218)
+    np.random.seed(323110)
     # Get the projects in each bin
     print("L " + str(len(list)))
     rows = []
@@ -586,6 +624,7 @@ def get_random_scenarios(list, project_ids, num, merge_commit_ids):
     for row in list:
         project_id = row['project_id']
         if project_id not in ids_in_list:
+            print(project_id)
             if project_ids[project_id - 1] == 0:
                 ids_in_list.append(row['project_id'])
 
@@ -797,7 +836,7 @@ def get_conflicting_file_with_comments_stats():
         for mc_cb in project_mc.iloc:
             count += 1
             if mc_cb['is_done'] == 0:
-                continue;
+                continue
             skip = []
             mc_mr = merge_results_grouped.get_group(mc_cb['id'])
             for mr in mc_mr.iloc:
@@ -877,18 +916,68 @@ def get_conflicting_file_stats():
     return plot_df
 
 
+def get_detailed_project_stats(unique_merge_scenarios, project_data):
+    same_intelliMerge = 0
+    changed_intelliMerge = 0
+    same_refMerge = 0
+    changed_refMerge = 0
+
+    for merge_scenario in unique_merge_scenarios:
+            print(merge_scenario)
+            git_conflicting_files = project_data.loc[(project_data.merge_tool=="Git") & (project_data.merge_commit_id == merge_scenario), 'total_conflicting_files'].values[0]
+            intelliMerge_conflicting_files = project_data.loc[(project_data.merge_tool=="IntelliMerge") & (project_data.merge_commit_id == merge_scenario), 'total_conflicting_files'].values[0]
+            refMerge_conflicting_files = project_data.loc[(project_data.merge_tool=="RefMerge") & (project_data.merge_commit_id == merge_scenario) , 'total_conflicting_files'].values[0]
+            git_conflicts = project_data.loc[(project_data.merge_tool=="Git") & (project_data.merge_commit_id == merge_scenario), 'total_conflicts'].values[0]
+            intelliMerge_conflicts = project_data.loc[(project_data.merge_tool=="IntelliMerge") & (project_data.merge_commit_id == merge_scenario), 'total_conflicts'].values[0]
+            refMerge_conflicts = project_data.loc[(project_data.merge_tool=="RefMerge") & (project_data.merge_commit_id == merge_scenario), 'total_conflicts'].values[0]
+            git_conflicting_loc = project_data.loc[(project_data.merge_tool=="Git") & (project_data.merge_commit_id == merge_scenario), 'total_conflicting_loc'].values[0]
+            intelliMerge_conflicting_loc = project_data.loc[(project_data.merge_tool=="IntelliMerge") & (project_data.merge_commit_id == merge_scenario), 'total_conflicting_loc'].values[0]
+            refMerge_conflicting_loc = project_data.loc[(project_data.merge_tool=="RefMerge") & (project_data.merge_commit_id == merge_scenario), 'total_conflicting_loc'].values[0]
+
+            if intelliMerge_conflicting_files > 0: #Ignore completely resolved merge scenarios and timed out merge scenarios
+                if git_conflicting_files == intelliMerge_conflicting_files:
+                    if git_conflicts == intelliMerge_conflicts:
+                        if git_conflicting_loc == intelliMerge_conflicting_loc:
+                            same_intelliMerge += 1
+                        else:
+                            changed_intelliMerge += 1
+                    else:
+                        changed_intelliMerge += 1
+                elif intelliMerge_conflicting_files < git_conflicting_files:
+                    changed_intelliMerge +=1
+                else:
+                    changed_intelliMerge += 1
+
+            if refMerge_conflicting_files > 0: #completely resolved are already accounted for
+                if git_conflicting_files == refMerge_conflicting_files:
+                    if git_conflicts == refMerge_conflicts:
+                        if git_conflicting_loc == refMerge_conflicting_loc:
+                            same_refMerge += 1
+                        else: 
+                            changed_refMerge += 1
+                    else:
+                        changed_refMerge += 1
+                elif refMerge_conflicting_files < git_conflicting_files:
+                    changed_refMerge +=1
+                else:
+                    changed_refMerge += 1
+
+    return same_intelliMerge, changed_intelliMerge, same_refMerge, changed_refMerge
+
 def get_detailed_scenario_stats_per_project():
     merge_results = get_merge_results()
 
-    df = pd.DataFrame(columns=['project_name', 'total_scenarios', 'total_resolvedIntelliMerge', 'timedOut_intelliMerge', 'total_conflictingIntelliMerge', 'total_resolvedRefMerge', 'timedOut_refMerge', 'total_conflictingRefMerge'])
+    df = pd.DataFrame(columns=['project_name', 'total_scenarios', 'total_resolved_intelliMerge', 'timedOut_intelliMerge', 'total_changed_intelliMerge', 'total_unchanged_intelliMerge', 'total_resolved_refMerge', 'timedOut_refMerge', 'total_changed_refMerge', 'total_unchanged_refMerge'])
 
 
     all_intelliMerge_resolved = 0
     all_intelliMerge_timeouts = 0
     all_intelliMerge_same = 0
+    all_intelliMerge_different = 0
     all_refMerge_resolved = 0
     all_refMerge_timeouts = 0
     all_refMerge_same = 0
+    all_refMerge_different = 0
 
     all_scenarios = 0
 
@@ -902,11 +991,14 @@ def get_detailed_scenario_stats_per_project():
         total_resolved_intelliMerge = len(project_data[(project_data.merge_tool=="IntelliMerge") & (project_data.total_conflicts == 0) & (project_data.runtime != "-1")])
         total_resolved_refMerge = len(project_data[(project_data.merge_tool=="RefMerge") & (project_data.total_conflicts == 0) & (project_data.runtime != "-1")])
 
-        total_timedOut_intelliMerge = len(project_data[(project_data.merge_tool=="IntelliMerge") & (project_data.runtime == "-1")])
-        total_timedOut_refMerge = len(project_data[(project_data.merge_tool=="RefMerge") & (project_data.runtime == "-1")])
+        total_timedOut_intelliMerge = len(project_data[(project_data.merge_tool=="IntelliMerge") & (project_data.runtime == -1)])
+        total_timedOut_refMerge = len(project_data[(project_data.merge_tool=="RefMerge") & (project_data.runtime == -1)])
 
         total_conflicting_intelliMerge = total_scenarios - total_resolved_intelliMerge - total_timedOut_intelliMerge
         total_conflicting_refMerge = total_scenarios - total_resolved_refMerge - total_timedOut_refMerge
+
+        total_same_intelliMerge, total_different_intelliMerge, total_same_refMerge, total_different_refMerge = get_detailed_project_stats(unique_merge_scenarios, project_data)
+
 
         all_intelliMerge_resolved += total_resolved_intelliMerge
         all_refMerge_resolved += total_resolved_refMerge
@@ -914,27 +1006,33 @@ def get_detailed_scenario_stats_per_project():
         all_intelliMerge_timeouts += total_timedOut_intelliMerge
         all_refMerge_timeouts += total_timedOut_refMerge
 
-        all_intelliMerge_same += total_conflicting_intelliMerge
-        all_refMerge_same += total_conflicting_refMerge
+        all_intelliMerge_same += total_same_intelliMerge
+        all_refMerge_same += total_same_refMerge
+        all_intelliMerge_different += total_different_intelliMerge
+        all_refMerge_different += total_different_refMerge
 
         same_refmerge_git = 0
         same_intellimerge_git = 0
 
         df = df.append({'project_name':project_name, 'total_scenarios':total_scenarios,
-            'total_resolvedIntelliMerge':total_resolved_intelliMerge,
-            'timedOut_intelliMerge': total_timedOut_intelliMerge,
-            'total_conflictingIntelliMerge': total_conflicting_intelliMerge,
-            'total_resolvedRefMerge':total_resolved_refMerge,
-            'timedOut_refMerge': total_timedOut_refMerge,
-            'total_conflictingRefMerge': total_conflicting_refMerge}, ignore_index=True)
+            'total_resolved_intelliMerge':str(total_resolved_intelliMerge) + get_percentage(total_resolved_intelliMerge, total_scenarios),
+            'timedOut_intelliMerge': str(total_timedOut_intelliMerge) + get_percentage(total_timedOut_intelliMerge, total_scenarios),
+            'total_changed_intelliMerge': str(total_different_intelliMerge) + get_percentage(total_different_intelliMerge, total_scenarios),
+            'total_unchanged_intelliMerge': str(total_same_intelliMerge) + get_percentage(total_same_intelliMerge, total_scenarios),
+            'total_resolved_refMerge':str(total_resolved_refMerge) + get_percentage(total_resolved_refMerge, total_scenarios),
+            'timedOut_refMerge': str(total_timedOut_refMerge) + get_percentage(total_timedOut_refMerge,total_scenarios),
+            'total_changed_refMerge': str(total_different_refMerge) + get_percentage(total_different_refMerge, total_scenarios),
+            'total_unchanged_refMerge': str(total_same_refMerge) + get_percentage(total_same_refMerge, total_scenarios)}, ignore_index=True)
 
     df = df.append({'project_name':'all', 'total_scenarios':all_scenarios,
-            'total_resolvedIntelliMerge':all_intelliMerge_resolved,
-            'total_conflictingIntelliMerge': all_intelliMerge_same,
-            'timedOut_intelliMerge': all_intelliMerge_timeouts,
-            'total_resolvedRefMerge':all_refMerge_resolved,
-            'timedOut_refMerge': all_refMerge_timeouts,
-            'total_conflictingRefMerge': all_refMerge_same}, ignore_index=True)
+            'total_resolved_intelliMerge':str(all_intelliMerge_resolved) + get_percentage(all_intelliMerge_resolved, all_scenarios),
+            'total_changed_intelliMerge': str(all_intelliMerge_different) + get_percentage(all_intelliMerge_different, all_scenarios),
+            'total_unchanged_intelliMerge': str(all_intelliMerge_same) + get_percentage(all_intelliMerge_same, all_scenarios),
+            'timedOut_intelliMerge': str(all_intelliMerge_timeouts) + get_percentage(all_intelliMerge_timeouts, all_scenarios),
+            'total_resolved_refMerge':str(all_refMerge_resolved) + get_percentage(all_refMerge_resolved, all_scenarios),
+            'timedOut_refMerge': str(all_refMerge_timeouts) + get_percentage(all_refMerge_timeouts, all_scenarios),
+            'total_changed_refMerge': str(all_refMerge_different) + get_percentage(all_refMerge_different, all_scenarios),
+            'total_unchanged_refMerge': str(all_refMerge_same) + get_percentage(all_refMerge_same, all_scenarios)}, ignore_index=True)
     df.to_csv("../results/overall_scenarios.csv")
 
 
@@ -1017,6 +1115,8 @@ def get_detailed_file_stats_per_project():
 
         if(len(refMerge_increases) > 0):
             median_refMerge_increase = statistics.median(refMerge_increases)
+        else:
+            median_refMerge_increase = 0
 
         df = df.append({'project_name':project_name, 'total_scenarios':total_scenarios,
             'reduced_conflicting_files_intelliMerge': str(reduced_intelliMerge_git) + " (" + "{:.0%}".format(median_intelliMerge_reduction) + ")",
@@ -1032,7 +1132,7 @@ def get_detailed_file_stats_per_project():
             'increased_conflicting_files_intelliMerge': str(len(all_intelliMerge_increases)) + " (" + "{:.0%}".format(statistics.median(all_intelliMerge_increases)) + ")",
             'same_conflicting_files_intelliMerge':-1,
             'reduced_conflicting_files_refMerge':str(len(all_refMerge_reductions)) + " (" + "{:.0%}".format(statistics.median(all_refMerge_reductions)) + ")",
-            'increased_conflicting_files_refMerge':str(len(all_refMerge_increases)) + " (" + "{:.0%}".format(statistics.median(all_refMerge_increases)) + ")",
+            'increased_conflicting_files_refMerge':str(len(all_refMerge_increases)) + " (" + "{:.0%}".format(median_refMerge_increase) + ")",
             'same_conflicting_files_refMerge':-1}, ignore_index=True)
     df.to_csv("../results/overall_files.csv")
 
@@ -1116,6 +1216,8 @@ def get_detailed_block_stats_per_project():
 
         if(len(refMerge_increase) > 0):
             median_refMerge_increase = statistics.median(refMerge_increase)
+        else:
+            median_refMerge_increase = 0
 
         df = df.append({'project_name':project_name, 'total_scenarios':total_scenarios,
             'reduced_conflict_intelliMerge': str(reduced_intelliMerge_git) + " (" + "{:.0%}".format(median_intelliMerge_reduction) + ")",
@@ -1130,7 +1232,7 @@ def get_detailed_block_stats_per_project():
             'increased_conflict_intelliMerge': str(len(all_intelliMerge_increases)) + " (" + "{:.0%}".format(statistics.median(all_intelliMerge_increases)) + ")",
             'same_conflict_intelliMerge':-1,
             'reduced_conflict_refMerge':str(len(all_refMerge_reductions)) + " (" + "{:.0%}".format(statistics.median(all_refMerge_reductions)) + ")",
-            'increased_conflict_refMerge':str(len(all_refMerge_increases)) + " (" + "{:.0%}".format(statistics.median(all_refMerge_increases)) + ")",
+            'increased_conflict_refMerge':str(len(all_refMerge_increases)) + " (" + "{:.0%}".format(median_refMerge_increase) + ")",
             'same_conflict_refMerge':-1}, ignore_index=True)
     df.to_csv("../results/overall_blocks.csv")
 
@@ -1354,8 +1456,158 @@ def get_detailed_involved_blocks_stats_per_project(involved_df):
             'same_conflicting_files_refMerge':-1}, ignore_index=True)
     df.to_csv("../results/overall_blocks_involved.csv")
 
+def get_res_timed_out_scenario_stats():
 
-def get_detailed_stats_per_project():
+
+    data = pd.read_csv('DetailedProjStats.csv')
+    mr_grouped_by_mc = get_merge_results().groupby('merge_commit_id')
+
+    df_to = pd.DataFrame(columns=['Project Name', 'Merge Scenario', 'RefMerge Timeout', 'IntelliMerge Timeout', 'No Timeout'])
+
+    for index, row in data.iterrows():
+        try:
+            mc_id = get_merge_commit_id_from_commit_hash(row['Merge Scenario'])
+
+            mr_group = mr_grouped_by_mc.get_group(mc_id)
+            project_name = row['Project Name']
+            merge_scenario = row['Merge Scenario']
+            refMerge_runtime = mr_group.loc[(mr_group.merge_tool=="RefMerge"), 'runtime'].values[0]
+            intelliMerge_runtime = mr_group.loc[(mr_group.merge_tool=="IntelliMerge"), 'runtime'].values[0]
+            total_commits = row['Total Commits']
+            if refMerge_runtime == -1 and intelliMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'RefMerge Timeout':total_commits, 'IntelliMerge Timeout':total_commits}, ignore_index=True)
+            elif refMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'RefMerge Timeout':total_commits}, ignore_index=True)
+            elif intelliMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'IntelliMerge Timeout':total_commits}, ignore_index=True)
+            else:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'No Timeout':total_commits}, ignore_index=True)
+
+
+        except:
+            continue
+
+    df_to.to_csv("DetailedTimedOutCommitStats.csv")
+
+def get_res_resolved_scenarios_per_tool():
+
+    df = pd.DataFrame(columns=['Project Name', 'Merge Scenario', 'Conflicting LOC', 'RefMerge Conflicting LOC', 'IntelliMerge Conflicting LOC'])
+    data = pd.read_csv('DetailedProjStats.csv')
+    mr_grouped_by_mc = get_merge_results().groupby('merge_commit_id')
+
+    refMerge_resolved = 0
+    refMerge_reduced = 0
+    intelliMerge_resolved = 0
+    intelliMerge_reduced = 0
+    for index, row in data.iterrows():
+        try:
+            mc_id = get_merge_commit_id_from_commit_hash(row['Merge Scenario'])
+            project_name = row['Project Name']
+            mr_group = mr_grouped_by_mc.get_group(mc_id)
+            is_resolvable = row['is_potentially_fully_resolvable']
+            if is_resolvable == False:
+                refMerge_loc = mr_group.loc[(mr_group.merge_tool=="RefMerge"), 'total_conflicting_loc'].values[0]
+                if refMerge_loc == 0:
+                    print(str(mr_group.loc[(mr_group.merge_tool=="RefMerge"), 'id'].values[0]))
+                continue
+            git_loc = mr_group.loc[(mr_group.merge_tool=="Git"), 'total_conflicting_loc'].values[0]
+            refMerge_loc = mr_group.loc[(mr_group.merge_tool=="RefMerge"), 'total_conflicting_loc'].values[0]
+            intelliMerge_loc = mr_group.loc[(mr_group.merge_tool=="IntelliMerge"), 'total_conflicting_loc'].values[0]
+
+            df = df.append({'Project Name': project_name, 'Merge Scenario':row['Merge Scenario'], 'Conflicting LOC':git_loc, 'RefMerge Conflicting LOC': refMerge_loc,
+                'IntelliMerge Conflicting LOC':intelliMerge_loc}, ignore_index=True)
+            if refMerge_loc == 0:
+                refMerge_resolved += 1
+            elif refMerge_loc < git_loc and refMerge_loc != -1:
+                refMerge_reduced += 1
+            if intelliMerge_loc == 0:
+                intelliMerge_resolved += 1
+            elif intelliMerge_loc < git_loc and intelliMerge_loc != -1:
+                intelliMerge_reduced += 1
+        except:
+            continue
+
+    print("RefMerge resolved " + str(refMerge_resolved))
+    print("RefMerge reduced " + str(refMerge_reduced))
+    print("IntelliMerge resolved " + str(intelliMerge_resolved))
+    print("IntelliMerge reduced " + str(intelliMerge_reduced))
+    df.to_csv("ResolvableScenarioStats.csv")
+
+def get_res_timed_out_file_stats():
+    data = pd.read_csv('DetailedProjStats.csv')
+    mr_grouped_by_mc = get_merge_results().groupby('merge_commit_id')
+
+    df_to = pd.DataFrame(columns=['Project Name', 'Merge Scenario', 'RefMerge Timeout', 'IntelliMerge Timeout', 'No Timeout'])
+
+    for index, row in data.iterrows():
+        try:
+            mc_id = get_merge_commit_id_from_commit_hash(row['Merge Scenario'])
+
+            mr_group = mr_grouped_by_mc.get_group(mc_id)
+            project_name = row['Project Name']
+            merge_scenario = row['Merge Scenario']
+            refMerge_runtime = mr_group.loc[(mr_group.merge_tool=="RefMerge"), 'runtime'].values[0]
+            intelliMerge_runtime = mr_group.loc[(mr_group.merge_tool=="IntelliMerge"), 'runtime'].values[0]
+            conflicting_java_files = row['Conflicting Java Files']
+            if refMerge_runtime == -1 and intelliMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'RefMerge Timeout':conflicting_java_files, 'IntelliMerge Timeout':conflicting_java_files}, ignore_index=True)
+            elif refMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'RefMerge Timeout':conflicting_java_files}, ignore_index=True)
+            elif intelliMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'IntelliMerge Timeout':conflicting_java_files}, ignore_index=True)
+            else:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'No Timeout':conflicting_java_files}, ignore_index=True)
+
+
+        except:
+            continue
+
+    df_to.to_csv("DetailedTimedOutFileStats.csv")
+
+def get_res_timed_out_involved_ref_stats():
+    data = pd.read_csv('DetailedProjStats.csv')
+    mr_grouped_by_mc = get_merge_results().groupby('merge_commit_id')
+
+    df_to = pd.DataFrame(columns=['Project Name', 'Merge Scenario', 'RefMerge Timeout', 'IntelliMerge Timeout', 'No Timeout'])
+
+    for index, row in data.iterrows():
+        try:
+            mc_id = get_merge_commit_id_from_commit_hash(row['Merge Scenario'])
+
+            mr_group = mr_grouped_by_mc.get_group(mc_id)
+            project_name = row['Project Name']
+            merge_scenario = row['Merge Scenario']
+            refMerge_runtime = mr_group.loc[(mr_group.merge_tool=="RefMerge"), 'runtime'].values[0]
+            intelliMerge_runtime = mr_group.loc[(mr_group.merge_tool=="IntelliMerge"), 'runtime'].values[0]
+            involved_refactorings = row['Involved Refactorings']
+            if refMerge_runtime == -1 and intelliMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'RefMerge Timeout':involved_refactorings, 'IntelliMerge Timeout':involved_refactorings}, ignore_index=True)
+            elif refMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'RefMerge Timeout':involved_refactorings}, ignore_index=True)
+            elif intelliMerge_runtime == -1:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'IntelliMerge Timeout':involved_refactorings}, ignore_index=True)
+            else:
+                df_to = df_to.append({'Project Name': project_name, 'Merge Scenario': merge_scenario,
+                'No Timeout':involved_refactorings}, ignore_index=True)
+
+
+        except:
+            continue
+
+    df_to.to_csv("DetailedTimedOutInvolvedRefsStats.csv")
+
+def get_res_detailed_stats_per_project():
     get_detailed_scenario_stats_per_project()
     get_detailed_file_stats_per_project()
     get_detailed_block_stats_per_project()
@@ -1367,6 +1619,8 @@ def get_stats_for_files_with_refactoring_conflicts():
     get_detailed_involved_blocks_stats_per_project(df)
 
 
+
+
 def get_data_frame(df_name):
     try:
         return pd.read_pickle(df_name + '.pickle')
@@ -1375,6 +1629,8 @@ def get_data_frame(df_name):
         df.to_pickle(df_name + '.pickle')
         return df
 
+
+
 def print_stats():
     df = get_data_frame('conflict_block_stats')
     df = get_data_frame('conflicting_file_stats')
@@ -1382,6 +1638,18 @@ def print_stats():
 
 
 if __name__ == '__main__':
-    get_sampling_scenarios()
-    get_detailed_stats_per_project()
+    get_functions = [x for x in dir() if x[:8] == 'get_res_']
+    print('Options available:')
+    for i in range(len(get_functions)):
+        print(str(i + 1) + '. ' + get_functions[i])
+    print(str(len(get_functions) + 1) + '. Exit')
+    while True:
+        inp = int(input('Choose an option: '))
+        if inp < 1 or inp > len(get_functions):
+            break
+        locals()[get_functions[inp - 1]]()
+
+
+
+
 

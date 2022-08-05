@@ -36,6 +36,8 @@ public class RefMerge extends AnAction {
     Git git;
     Project project;
 
+
+
     @Override
     public void update(@NotNull AnActionEvent e) {
         // Using the event, evaluate the context, and enable or disable the action.
@@ -47,8 +49,9 @@ public class RefMerge extends AnAction {
         GitRepositoryManager repoManager = GitRepositoryManager.getInstance(project);
         List<GitRepository> repos = repoManager.getRepositories();
         GitRepository repo = repos.get(0);
-        String rightCommit = "287b1a4275";
-        String leftCommit = "e93bac43b8";
+
+        String leftCommit = System.getenv("LEFT_COMMIT");
+        String rightCommit = System.getenv("RIGHT_COMMIT");
 
         List<Refactoring> detectedRefactorings = new ArrayList<>();
         refMerge(rightCommit, leftCommit, project, repo, detectedRefactorings);
@@ -99,16 +102,22 @@ public class RefMerge extends AnAction {
             futureRefMiner.get(11, TimeUnit.MINUTES);
 
 
-        } catch (TimeoutException | InterruptedException | ExecutionException e) {
+        } catch (TimeoutException e) {
             System.out.println("RefMerge Timed Out");
             return null;
         }
+        catch (InterruptedException | ExecutionException e) {
+            System.out.println("There was an error detecting refactorings");
+            e.printStackTrace();
+            return null;
+        }
+
         ArrayList<RefactoringObject> rightRefs = rightRefsAtomic.get();
         ArrayList<RefactoringObject> leftRefs = leftRefsAtomic.get();
 
         long time2 = System.currentTimeMillis();
-        // If it has been 10 minutes, it will take more than 15 minutes to complete RefMerge
-        if((time - time2) > 600000) {
+        // If it timed out
+        if((time - time2) > 900000) {
             System.out.println("RefMerge Timed Out");
             return null;
         }
@@ -119,17 +128,22 @@ public class RefMerge extends AnAction {
         Utils.reparsePsiFiles(project);
         Utils.dumbServiceHandler(project);
         System.out.println("Inverting right refactorings");
-        InvertRefactorings.invertRefactorings(rightRefs, project);
-
+        int failedRefactorings = InvertRefactorings.invertRefactorings(rightRefs, project);
+        Utils.reparsePsiFiles(project);
+        Utils.dumbServiceHandler(project);
         String rightUndoCommit = gitUtils.addAndCommit();
         gitUtils.checkout(leftCommit);
         // Update the PSI classes after the commit
         Utils.reparsePsiFiles(project);
         Utils.dumbServiceHandler(project);
         System.out.println("Inverting left refactorings");
-        InvertRefactorings.invertRefactorings(leftRefs, project);
+        failedRefactorings += InvertRefactorings.invertRefactorings(leftRefs, project);
 
         gitUtils.addAndCommit();
+
+        String message = failedRefactorings + " refactorings were not inverted for " + leftCommit + " and " + rightCommit;
+        Utils.log(project.getName(), message);
+
         boolean isConflicting = gitUtils.merge(rightUndoCommit);
 
         Utils.refreshVFS();
@@ -143,8 +157,8 @@ public class RefMerge extends AnAction {
         Pair<ArrayList<Pair<RefactoringObject, RefactoringObject>>, ArrayList<RefactoringObject>> pair = matrix.detectConflicts(leftRefs, rightRefs);
 
         time2 = System.currentTimeMillis();
-        // If it has been 14 minutes, it will take more than 30 minutes to complete RefMerge
-        if((time - time2) > 780000) {
+        // Timeout if it's been 15 minutes
+        if((time - time2) > 900000) {
             System.out.println("RefMerge Timed Out");
             return null;
         }
@@ -184,8 +198,8 @@ public class RefMerge extends AnAction {
                     public void handle(String commitId, List<Refactoring> refactorings) {
                         // Add each refactoring to refResult
                         for(Refactoring refactoring : refactorings) {
-                            detectedRefactorings.add(refactoring);
                             // Create the refactoring object so we can compare and update
+                            detectedRefactorings.add(refactoring);
                             RefactoringObject refactoringObject = RefactoringObjectUtils.createRefactoringObject(refactoring);
                             // If the refactoring type is not presently supported, skip it
                             if(refactoringObject == null) {
