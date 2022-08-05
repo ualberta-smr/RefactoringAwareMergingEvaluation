@@ -3,12 +3,14 @@ package ca.ualberta.cs.smr.refmerge.utils;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.*;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.typeObjects.MethodSignatureObject;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.typeObjects.ParameterObject;
+import com.intellij.analysis.AnalysisScope;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
+import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.DumbServiceImpl;
 import com.intellij.openapi.project.Project;
@@ -23,14 +25,23 @@ import com.intellij.psi.*;
 import com.intellij.psi.impl.JavaPsiFacadeImpl;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.searches.ClassInheritorsSearch;
 import com.intellij.refactoring.JavaRefactoringFactory;
 import com.intellij.refactoring.RefactoringFactory;
 import com.intellij.refactoring.RenameRefactoring;
+import com.intellij.refactoring.memberPullUp.PullUpProcessor;
+import com.intellij.refactoring.util.classMembers.MemberInfo;
+import com.intellij.refactoring.util.duplicates.MethodDuplicatesHandler;
 import com.intellij.usageView.UsageInfo;
+import com.intellij.util.Query;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.jps.model.serialization.PathMacroUtil;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -39,6 +50,9 @@ public class Utils {
 
     public static final String CONFLICT_LEFT_BEGIN = "<<<<<<<";
     public static final String CONFLICT_RIGHT_END = ">>>>>>>";
+
+    private static final boolean LOG_TO_FILE  = true;
+    private static final String LOG_FILE = "log.txt";
 
 
     public Utils(Project project) {
@@ -61,6 +75,42 @@ public class Utils {
         }
 
     }
+
+    public static void log(String projectName, Object message) {
+        String timeStamp = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss z").format(new Date());
+        String logMessage = timeStamp + " ";
+        if (message instanceof String){
+            logMessage += (String) message;
+        } else if (message instanceof Exception) {
+            logMessage += ((Exception) message).getMessage() + "\n";
+            StringBuilder stackBuilder = new StringBuilder();
+            StackTraceElement[] stackTraceElements = ((Exception) message).getStackTrace();
+            for (int i = 0; i < stackTraceElements.length; i++) {
+                StackTraceElement stackTraceElement = stackTraceElements[i];
+                stackBuilder.append(stackTraceElement.toString());
+                if (i < stackTraceElements.length - 1) stackBuilder.append("\n");
+            }
+            logMessage += stackBuilder.toString();
+        } else {
+            logMessage = message.toString();
+        }
+        System.out.println(logMessage);
+
+        if (LOG_TO_FILE) {
+            String logPath = LOG_FILE;
+            if (projectName != null && !projectName.trim().equals("")) logPath = projectName;
+            try {
+                String path = System.getProperty("user.home") + "/temp/logs/";
+                new File(path).mkdirs();
+                Files.write(Paths.get(path + logPath), Arrays.asList(logMessage),
+                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 
     public static void dumbServiceHandler(Project project) {
         if(DumbService.isDumb(project)) {
@@ -89,6 +139,7 @@ public class Utils {
         String relativePath = projectPath + "/" + filePath;
         //relativePath = getRelativePathOfSourceRoot(relativePath, project.getName());
         filePackage = filePackage.replaceAll("\\.", "/");
+        filePackage = filePackage.substring(0, filePackage.lastIndexOf("/"));
         String path = "";
         try {
             path = relativePath.substring(0, relativePath.indexOf(filePackage));
@@ -96,6 +147,7 @@ public class Utils {
         catch(StringIndexOutOfBoundsException e) {
             path = getRelativePathOfSourceRoot(relativePath, project.getName());
         }
+        path = path.substring(0, path.lastIndexOf("/"));
         File directory = new File(path);
         VirtualFile sourceVirtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(directory);
         if(sourceVirtualFile == null) {
@@ -103,10 +155,12 @@ public class Utils {
         }
         ModuleManager moduleManager = ModuleManager.getInstance(project);
         // Get the first module that does not depend on any other modules
-        ArrayList<Module> modules = getModule(sourceVirtualFile, moduleManager.getModules());
+        ArrayList<Module> modules = getModule(sourceVirtualFile, moduleManager.getModules(), path);
         if(modules == null) {
             return;
         }
+
+
         for(Module module : modules) {
             AtomicReference<ModifiableRootModel> rootModel = new AtomicReference<>();
             ReadAction.run(() -> {
@@ -114,6 +168,23 @@ public class Utils {
             });
             directory = new File(Objects.requireNonNull(PathMacroUtil.getModuleDir(module.getModuleFilePath())));
             VirtualFile moduleVirtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(directory);
+            if(moduleVirtualFile == null) {
+                try {
+                    if(sourceVirtualFile.getCanonicalPath().contains(directory.getCanonicalPath())) {
+                        VirtualFile tempVirtualFile = sourceVirtualFile;
+                        while (!sourceVirtualFile.getCanonicalPath().equals(directory.getAbsolutePath())) {
+                            tempVirtualFile = tempVirtualFile.getParent();
+                        }
+                        moduleVirtualFile = tempVirtualFile;
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            else if(!moduleVirtualFile.equals(sourceVirtualFile) &&
+                    !moduleVirtualFile.getCanonicalPath().contains(Objects.requireNonNull(sourceVirtualFile.getCanonicalPath()))) {
+                continue;
+            }
             ContentEntry contentEntry = getContentEntry(moduleVirtualFile, rootModel.get());
             if(contentEntry == null) {
                 continue;
@@ -157,10 +228,17 @@ public class Utils {
     /*
      * Get the module that the virtual file is in.
      */
-    private ArrayList<Module> getModule(VirtualFile virtualFile, Module[] modules) {
+    private ArrayList<Module> getModule(VirtualFile virtualFile, Module[] modules, String path) {
         ArrayList<Module> potentialModules = new ArrayList<>();
         for(Module module : modules) {
             VirtualFile moduleFile = module.getModuleFile();
+            String filePath = module.getModuleFilePath();
+            filePath = filePath.substring(0, filePath.lastIndexOf("/"));
+            // Return the module that we need
+            if(filePath.equals(path)) {
+                potentialModules.add(module);
+                return potentialModules;
+            }
             if(moduleFile == null) {
                 continue;
             }
@@ -172,11 +250,7 @@ public class Utils {
                 potentialModules.add(module);
             }
         }
-        // If we could not find the module, there's probably only one module file in ./idea
-        if(modules.length > 0 && potentialModules.size() == 0) {
-            potentialModules.add(modules[0]);
-            return potentialModules;
-        }
+        potentialModules.addAll(Arrays.asList(modules));
         return potentialModules;
     }
 
@@ -185,6 +259,12 @@ public class Utils {
      */
     private ContentEntry getContentEntry(VirtualFile moduleVirtualFile, ModifiableRootModel rootModel) {
         for(ContentEntry contentEntry : rootModel.getContentEntries()) {
+            if(contentEntry == null) {
+                continue;
+            }
+            if(contentEntry.getFile() == null) {
+                continue;
+            }
             if(contentEntry.getFile().equals(moduleVirtualFile)) {
                 return contentEntry;
             }
@@ -313,7 +393,7 @@ public class Utils {
                 }
                 // Need to update tests to remove this
                 if (ApplicationManager.getApplication().isUnitTestMode()) {
-                    if(qualifiedClass.contains(it.getName())) {
+                    if(qualifiedClass.contains(Objects.requireNonNull(it.getName()))) {
                         return it;
                     }
                 }
@@ -326,6 +406,7 @@ public class Utils {
             }
             for(PsiClass it : jClasses) {
                 String qName = it.getQualifiedName();
+                assert qName != null;
                 qName = qName.substring(qName.lastIndexOf(".") + 1);
                 String otherName = qualifiedClass.substring(qualifiedClass.lastIndexOf(".") + 1);
                 if(Objects.equals(qName, otherName)) {
@@ -355,6 +436,32 @@ public class Utils {
         }
         return null;
     }
+
+    public static PsiParameter getPsiParameter(PsiMethod psiMethod, ParameterObject parameterObject) {
+        // No need to compare types, two parameters in the same signature cannot have the same name,
+        // so the type does not matter
+        String parameterName = parameterObject.getName();
+        PsiParameter[] parameters = psiMethod.getParameterList().getParameters();
+        for(PsiParameter parameter : parameters) {
+            String psiParameterName = parameter.getName();
+            if(psiParameterName.equals(parameterName)) {
+                return parameter;
+            }
+        }
+
+        return null;
+    }
+
+    public static PsiField getPsiField(PsiClass psiClass, String fieldName) {
+        PsiField[] fields = psiClass.getFields();
+        for(PsiField field : fields) {
+            if(field.getName().equals(fieldName)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
 
     /*
      * Format the text to remove new lines and spaces for comparing code fragments
@@ -501,9 +608,82 @@ public class Utils {
         }
         catch(NullPointerException e) {
             e.printStackTrace();
-            return;
         }
     }
+
+    public MemberInfo[] getMembersToPullUp(List<com.intellij.openapi.util.Pair<String, String>> subClasses, MethodSignatureObject methodObject) {
+        MemberInfo[] psiMembers = new MemberInfo[subClasses.size()];
+
+        int i = 0;
+        for(com.intellij.openapi.util.Pair<String, String> subClass : subClasses) {
+            String className = subClass.getFirst();
+            String fileName = subClass.getSecond();
+            PsiClass psiClass = getPsiClassFromClassAndFileNames(className, fileName);
+            if(psiClass == null) {
+                continue;
+            }
+            PsiMethod psiMethod = getPsiMethod(psiClass, methodObject);
+            if(psiMethod == null) {
+                continue;
+            }
+            psiMembers[i] = new MemberInfo(psiMethod);
+            i++;
+        }
+
+        return  psiMembers;
+    }
+
+    public MemberInfo[] getFieldsToPullUp(List<com.intellij.openapi.util.Pair<String, String>> subClasses, String fieldName) {
+        MemberInfo[] psiMembers = new MemberInfo[subClasses.size()];
+
+        int i = 0;
+        for(com.intellij.openapi.util.Pair<String, String> subClass : subClasses) {
+            String className = subClass.getFirst();
+            String fileName = subClass.getSecond();
+            PsiClass psiClass = getPsiClassFromClassAndFileNames(className, fileName);
+            if(psiClass == null) {
+                continue;
+            }
+            PsiField psiField = getPsiField(psiClass, fieldName);
+            if(psiField == null) {
+                continue;
+            }
+            psiMembers[i] = new MemberInfo(psiField);
+            i++;
+        }
+
+        return  psiMembers;
+    }
+
+
+
+    public void processMethodsDuplicates(PullUpProcessor pullUpProcessor) {
+        PsiClass myTargetSuperClass = pullUpProcessor.getTargetClass();
+        Set<PsiMember> myMembersAfterMove = pullUpProcessor.getMovedMembers();
+        ProgressManager.getInstance().runProcessWithProgressSynchronously(() -> ApplicationManager.getApplication().runReadAction(() -> {
+            if (!myTargetSuperClass.isValid()) return;
+            final Query<PsiClass> search = ClassInheritorsSearch.search(myTargetSuperClass);
+            final Set<VirtualFile> hierarchyFiles = new HashSet<>();
+            for (PsiClass aClass : search) {
+                final PsiFile containingFile = aClass.getContainingFile();
+                if (containingFile != null) {
+                    final VirtualFile virtualFile = containingFile.getVirtualFile();
+                    if (virtualFile != null) {
+                        hierarchyFiles.add(virtualFile);
+                    }
+                }
+            }
+            final Set<PsiMember> methodsToSearchDuplicates = new HashSet<>();
+            for (PsiMember psiMember : myMembersAfterMove) {
+                if (psiMember instanceof PsiMethod && psiMember.isValid() && ((PsiMethod)psiMember).getBody() != null) {
+                    methodsToSearchDuplicates.add(psiMember);
+                }
+            }
+
+            MethodDuplicatesHandler.invokeOnScope(project, methodsToSearchDuplicates, new AnalysisScope(project, hierarchyFiles), true);
+        }), MethodDuplicatesHandler.getRefactoringName(), true, project);
+    }
+
 
 }
 

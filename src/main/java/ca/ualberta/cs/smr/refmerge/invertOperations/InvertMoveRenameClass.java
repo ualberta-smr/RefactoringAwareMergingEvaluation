@@ -2,6 +2,7 @@ package ca.ualberta.cs.smr.refmerge.invertOperations;
 
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.MoveRenameClassObject;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.RefactoringObject;
+import ca.ualberta.cs.smr.refmerge.refactoringObjects.typeObjects.ClassObject;
 import ca.ualberta.cs.smr.refmerge.utils.Utils;
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
@@ -21,7 +22,7 @@ import com.intellij.usages.UsageView;
 import com.intellij.usages.UsageViewManager;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class InvertMoveRenameClass {
@@ -37,9 +38,10 @@ public class InvertMoveRenameClass {
      */
     public void invertMoveRenameClass(RefactoringObject ref) {
         MoveRenameClassObject moveRenameClassObject = (MoveRenameClassObject) ref;
-        String srcQualifiedClass = moveRenameClassObject.getOriginalClassObject().getClassName();
-        String destQualifiedClass = moveRenameClassObject.getDestinationClassObject().getClassName();
-        String srcClassName = srcQualifiedClass.substring(srcQualifiedClass.lastIndexOf(".") + 1);
+        ClassObject classObject = moveRenameClassObject.getDestinationClassObject();
+        String destQualifiedClass = classObject.getClassName();
+        String srcClassName = moveRenameClassObject.getOriginalClassObject().getClassName();
+        srcClassName = srcClassName.substring(srcClassName.lastIndexOf(".") + 1);
         String filePath = moveRenameClassObject.getDestinationFilePath();
         Utils utils = new Utils(project);
 
@@ -52,11 +54,19 @@ public class InvertMoveRenameClass {
         VirtualFile vFile = psiClass.getContainingFile().getVirtualFile();
         if(moveRenameClassObject.isRenameMethod()) {
             RefactoringFactory factory = JavaRefactoringFactory.getInstance(project);
-            RenameRefactoring renameRefactoring = factory.createRename(psiClass, srcClassName, true, true);
-            renameRefactoring.respectAllAutomaticRenames();
-            renameRefactoring.respectEnabledAutomaticRenames();
+            RenameRefactoring renameRefactoring = factory.createRename(psiClass, srcClassName, false, false);
             UsageInfo[] refactoringUsages = renameRefactoring.findUsages();
-            renameRefactoring.doRefactoring(refactoringUsages);
+            List<UsageInfo> usageInfosToRefactor = new ArrayList<>();
+            for(UsageInfo usageInfo : refactoringUsages) {
+                if(!usageInfo.isNonCodeUsage && usageInfo.isWritable() && !usageInfo.isDynamicUsage() && usageInfo.isValid()) {
+                    usageInfosToRefactor.add(usageInfo);
+
+
+                }
+            }
+            refactoringUsages = usageInfosToRefactor.toArray(UsageInfo[]::new);
+            renameRefactoring.doRefactoring(usageInfosToRefactor.toArray(refactoringUsages));
+
             DumbService.getInstance(project).completeJustSubmittedTasks();
         }
         if(moveRenameClassObject.isMoveMethod()) {
@@ -64,7 +74,9 @@ public class InvertMoveRenameClass {
             if(moveRenameClassObject.isMoveInner()) {
                 String originalPackage = moveRenameClassObject.getOriginalClassObject().getPackageName();
                 PsiPackage psiPackage = JavaPsiFacade.getInstance(project).findPackage(originalPackage);
-                assert psiPackage != null;
+                if(psiPackage == null) {
+                    return;
+                }
                 PsiDirectory[] psiDirectories = psiPackage.getDirectories();
                 PsiDirectory targetContainer = psiDirectories[0];
                 if (psiDirectories.length > 1) {
@@ -112,7 +124,7 @@ public class InvertMoveRenameClass {
                 try {
                     ApplicationManager.getApplication().invokeAndWait(processor, ModalityState.current());
                 }
-                catch(NullPointerException e) {
+                catch(NullPointerException | AssertionError e) {
                     System.out.println(destQualifiedClass);
                     e.printStackTrace();
                     return;
@@ -181,7 +193,6 @@ public class InvertMoveRenameClass {
         if(usageView != null) {
             usageView.close();
         }
-
         // Update the virtual file of the class
         vFile.refresh(false, true);
 

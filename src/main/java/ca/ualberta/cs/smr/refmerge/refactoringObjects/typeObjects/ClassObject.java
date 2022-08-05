@@ -19,6 +19,7 @@ public class ClassObject {
 
     public void setPackageName(String packageName) {
         this.packageName = packageName;
+        this.className = packageName + "." + className;
     }
 
     public String getPackageName() {

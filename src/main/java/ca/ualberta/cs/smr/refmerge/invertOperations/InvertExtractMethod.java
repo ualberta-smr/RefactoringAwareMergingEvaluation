@@ -104,7 +104,9 @@ public class InvertExtractMethod {
     private PsiElement[] getSurroundingElements(PsiMethod psiMethod, PsiMethod extractedMethod, OperationInvocation methodInvocation) {
         PsiElement[] surroundingElements = new PsiElement[4];
         PsiCodeBlock psiCodeBlock = psiMethod.getBody();
-        assert psiCodeBlock != null;
+        if(psiCodeBlock == null) {
+            return null;
+        }
 
         // Get the correct PSI reference
         Query<PsiReference> psiReferences = ReferencesSearch.search(extractedMethod);

@@ -11,6 +11,7 @@ import com.intellij.usageView.UsageInfo;
 import com.intellij.usages.UsageView;
 import com.intellij.usages.UsageViewManager;
 
+// To Do: Refactor to use invert super class
 public class InvertMoveRenameMethod {
 
     Project project;

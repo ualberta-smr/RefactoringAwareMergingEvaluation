@@ -1,9 +1,6 @@
 package ca.ualberta.cs.smr.refmerge.matrix.receivers;
 
-import ca.ualberta.cs.smr.refmerge.matrix.dispatcher.ExtractMethodDispatcher;
-import ca.ualberta.cs.smr.refmerge.matrix.dispatcher.InlineMethodDispatcher;
-import ca.ualberta.cs.smr.refmerge.matrix.dispatcher.MoveRenameClassDispatcher;
-import ca.ualberta.cs.smr.refmerge.matrix.dispatcher.MoveRenameMethodDispatcher;
+import ca.ualberta.cs.smr.refmerge.matrix.dispatcher.*;
 import ca.ualberta.cs.smr.refmerge.refactoringObjects.RefactoringObject;
 import com.intellij.openapi.project.Project;
 
@@ -66,6 +63,53 @@ public class Receiver {
      */
     public void receive(InlineMethodDispatcher dispatcher) {
         // This is empty because subclasses will override this to dispatch to the correct logic cell.
+    }
+
+    /*
+     * Any method that overrides this will dispatch to a logic cell containing a rename field refactoring.
+     */
+    public void receive(MoveRenameFieldDispatcher dispatcher) {
+        // This is empty because subclasses that receive a rename+move field dispatcher will override this method.
+    }
+
+    public void receive(PullUpMethodDispatcher dispatcher) {
+        // This is empty because subclasses that receive a pull up method dispatcher will override this method.
+    }
+
+    public void receive(PushDownMethodDispatcher dispatcher) {
+        // This is empty because subclasses that receive a push down method dispatcher will override this method.
+    }
+
+    public void receive(PullUpFieldDispatcher dispatcher) {
+        // This is empty because subclasses that receive a pull up field dispatcher will override this method.
+    }
+
+    public void receive(PushDownFieldDispatcher dispatcher) {
+        // This is empty because subclasses that receive a push down field dispatcher will override this method.
+    }
+
+    public void receive(RenamePackageDispatcher dispatcher) {
+        // This is empty because subclasses that receive a rename package dispatcher will override this method.
+    }
+
+    public void receive(RenameParameterDispatcher dispatcher) {
+        // This is empty because subclasses that receive a rename parameter dispatcher will override this method.
+    }
+
+    public void receive(AddParameterDispatcher dispatcher) {
+        // This is empty because subclasses that receive an add parameter dispatcher will override this method.
+    }
+
+    public void receive(RemoveParameterDispatcher dispatcher) {
+        // This is empty because subclasses that receive an add parameter dispatcher will override this method.
+    }
+
+    public void receive(ReorderParameterDispatcher dispatcher) {
+        // This is empty because subclasses that receive a reorder parameter dispatcher will override this method.
+    }
+
+    public void receive(ChangeParameterTypeDispatcher dispatcher) {
+        // This is empty because subclasses that receive a change parameter type dispatcher will override this method.
     }
 
 }

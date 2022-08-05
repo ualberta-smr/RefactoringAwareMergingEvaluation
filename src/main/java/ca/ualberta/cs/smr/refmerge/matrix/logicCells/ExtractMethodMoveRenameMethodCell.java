@@ -192,7 +192,7 @@ public class ExtractMethodMoveRenameMethodCell {
             ((ExtractMethodObject) extractMethod).setDestinationClassName(moveRenameMethodObject.getDestinationClassName());
             ((ExtractMethodObject) extractMethod).setDestinationMethodSignature(destinationRenameMethod);
         }
-        // If the original class name
+
 
         return isTransitive;
     }
