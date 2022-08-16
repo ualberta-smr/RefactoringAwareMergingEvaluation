@@ -2,7 +2,7 @@
 
 In RefactoringAwareMergingEvaluation, we perform a quantitative comparison between operation-based refactoring-aware merging (implemented in RefMerge) and 
 graph-based refactoring-aware merging (implemented in IntelliMerge). Afterwards, we dive deeper into the results by manually sampling 50 merge scenarios and 
-investigate the conflicts that Git, RefMerge, and IntelliMerge report as well as what their causes are. This evaluation was used in the paper, "A Systematic Comparison of Two Refactoring-aware Merging Techniques" (http://arxiv.org/abs/2112.10370).
+investigate the conflicts that Git, RefMerge, and IntelliMerge report as well as what their causes are. This evaluation was used in the paper, "Refactoring-aware Operation-based Merging: An Empirical Evaluation" (http://arxiv.org/abs/2112.10370).
 
 ## System requirements
 * Linux
