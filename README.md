@@ -131,3 +131,7 @@ The zip file, database/refactoringAwareMerging_results.zip, contains the results
 
 The overall results for our manual analysis are stored in `results/manual_sampling_results.csv`. This includes the results for each merge scenario as well as reasons that we think each conflict falls into its corresponding category. The results used to produce the Git table in RQ2 are stored in `results/git_table.csv`. The results used for the RefMerge and IntelliMerge tables are respectively stored in `results/refMerge_table.csv` and `results/intelliMerge.csv`.
 
+### RefMerge Conflict Detection Correctness
+
+To help ensure correct conflict detection in RefMerge, we provide the the conflict detection logic in the [conflict detection wiki](https://github.com/ualberta-smr/RefMerge/wiki/Conflict-&-Dependence-Logic). We provide the requirements for each pair to result in a conflict or dependence relation.
+
