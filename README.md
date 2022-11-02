@@ -4,6 +4,10 @@ In RefactoringAwareMergingEvaluation, we perform a quantitative comparison betwe
 graph-based refactoring-aware merging (implemented in IntelliMerge). Afterwards, we dive deeper into the results by manually sampling 50 merge scenarios and 
 investigate the conflicts that Git, RefMerge, and IntelliMerge report as well as what their causes are. This evaluation was used in the paper, "Refactoring-aware Operation-based Merging: An Empirical Evaluation" (http://arxiv.org/abs/2112.10370).
 
+## RefMerge
+
+We implemented operation-based rerfactoring-aware merging in [RefMerge](https://github.com/ualberta-smr/RefMerge). RefMerge works by undoing refactorings, merging, and then replaying the refactorings. When merging, RefMerge considers the interactions between each pair of refactorings and how these interactions can lead to a conflict or how they can result in a dependence relationship. We provide the conflict and dependence detection logic for each pair in the [conflict detection wiki](https://github.com/ualberta-smr/RefMerge/wiki/Conflict-&-Dependence-Logic). 
+
 ## System requirements
 * Linux
 * git
@@ -131,7 +135,5 @@ The zip file, database/refactoringAwareMerging_results.zip, contains the results
 
 The overall results for our manual analysis are stored in `results/manual_sampling_results.csv`. This includes the results for each merge scenario as well as reasons that we think each conflict falls into its corresponding category. The results used to produce the Git table in RQ2 are stored in `results/git_table.csv`. The results used for the RefMerge and IntelliMerge tables are respectively stored in `results/refMerge_table.csv` and `results/intelliMerge.csv`.
 
-### RefMerge Conflict Detection Correctness
 
-To help ensure correct conflict detection in RefMerge, we provide the the conflict detection logic in the [conflict detection wiki](https://github.com/ualberta-smr/RefMerge/wiki/Conflict-&-Dependence-Logic). We provide the requirements for each pair to result in a conflict or dependence relation.
 
