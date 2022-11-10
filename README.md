@@ -45,7 +45,7 @@ Use the refactoring analysis dump found [here](https://github.com/ualberta-smr/r
 
 This evaluation repository already comes with the versions of IntelliMerge and RefMerge we use in the paper:
 
-- Our [fork of IntelliMerge](https://github.com/max-ellis/IntelliMerge/tree/evaluation), at commit [5966f75](https://github.com/max-ellis/IntelliMerge/commit/5966f75)
+- Our [fork of IntelliMerge](https://github.com/max-ellis/IntelliMerge/tree/evaluation), at commit [5966f75](https://github.com/max-ellis/IntelliMerge/commit/5966f75). Note that we had to fix some issues in IntelliMerge to be able to reproduce their results. We document these in in a [wiki page](https://github.com/max-ellis/IntelliMerge/wiki/Details) in our fork.
 - [RefMerge](https://github.com/ualberta-smr/RefMerge), [release 1.0.0](https://github.com/ualberta-smr/RefMerge/releases/tag/1.0.0)
 
 If you would like to use different versions than provided:
