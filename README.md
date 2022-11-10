@@ -142,3 +142,10 @@ Edit the configuration tasks to have `:runIde -Pmode=comparison -PdataPath=path
 -PevaluationProject=project`, where path is the path to the cloned test projects
 and project is the test project.
 
+## Contributors
+
+- [Max Ellis](https://github.com/max-ellis) (main developer)
+- [Sarah Nadi](https://sarahnadi.org/)
+- [Danny Dig](http://dig.cs.illinois.edu/)
+
+Please open an Issue for any problems/questions.
